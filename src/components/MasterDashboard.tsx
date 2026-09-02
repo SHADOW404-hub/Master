@@ -4,6 +4,7 @@ import {
   Wallet, ShieldCheck, Clock, CheckCircle2, 
   Upload, ArrowDownRight, CreditCard 
 } from 'lucide-react';
+import { formatCardNumber } from '../utils/validation';
 
 interface MasterDashboardProps {
   master: Master;
@@ -164,7 +165,7 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
                 type="text"
                 required
                 value={withdrawCard}
-                onChange={(e) => setWithdrawCard(e.target.value)}
+                onChange={(e) => setWithdrawCard(formatCardNumber(e.target.value))}
                 placeholder="8600 0000 0000 0000"
                 className="w-full bg-[#131B2E] border border-white/10 rounded-xl p-2.5 text-white font-mono outline-none focus:border-emerald-500"
               />

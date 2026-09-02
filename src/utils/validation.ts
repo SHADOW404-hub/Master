@@ -39,6 +39,15 @@ export function formatCardNumber(value: string): string {
   return digits.replace(/(.{4})/g, '$1 ').trim();
 }
 
+// Format card expiry (MM/YY)
+export function formatCardExpiry(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  if (digits.length >= 3) {
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  }
+  return digits;
+}
+
 // Detect card type (Uzcard / Humo / Other)
 export function getCardType(cardNumber: string): 'uzcard' | 'humo' | 'unknown' {
   const cleaned = cardNumber.replace(/\D/g, '');

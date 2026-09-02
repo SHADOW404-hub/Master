@@ -314,6 +314,29 @@ body::before {
   cursor: not-allowed;
 }
 
+.btn-warning {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: #fff;
+  font-weight: 700;
+  font-family: var(--font);
+  padding: 0.78rem 1.5rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.22s ease;
+  box-shadow: 0 4px 18px rgba(245,158,11,0.35);
+}
+
+.btn-warning:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 26px rgba(245,158,11,0.5);
+}
+
 .btn-secondary {
   background: rgba(255,255,255,0.05);
   color: var(--text);

@@ -6,6 +6,7 @@ import {
   Save, AlertCircle
 } from 'lucide-react';
 import { getAvatarSVG } from '../utils/avatar';
+import { formatCardNumber } from '../utils/validation';
 
 interface ProfilePageProps {
   currentUser: { name: string; email: string; phone: string; role: UserRole } | null;
@@ -396,7 +397,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   type="text"
                   required
                   value={withdrawCard}
-                  onChange={(e) => setWithdrawCard(e.target.value)}
+                  onChange={(e) => setWithdrawCard(formatCardNumber(e.target.value))}
                   placeholder="8600 0000 0000 0000"
                   className="w-full bg-[#0F172A] border border-white/10 rounded-xl p-3 text-white font-mono outline-none focus:border-emerald-500 font-bold"
                 />

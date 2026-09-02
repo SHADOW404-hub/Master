@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Master } from '../types';
 import { X, Lock, CreditCard, CheckCircle2 } from 'lucide-react';
-import { formatCardNumber } from '../utils/validation';
+import { formatCardNumber, formatCardExpiry } from '../utils/validation';
 
 interface EscrowCheckoutModalProps {
   master: Master;
@@ -156,8 +156,9 @@ export const EscrowCheckoutModal: React.FC<EscrowCheckoutModalProps> = ({
                 <input
                   type="text"
                   required
+                  maxLength={5}
                   value={expiry}
-                  onChange={(e) => setExpiry(e.target.value)}
+                  onChange={(e) => setExpiry(formatCardExpiry(e.target.value))}
                   placeholder="MM/YY"
                   className="w-full bg-[#131B2E] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white font-mono outline-none focus:border-blue-500"
                 />
