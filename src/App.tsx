@@ -98,12 +98,42 @@ export function App() {
     price: number;
   } | null>(null);
 
-  // Restore and sync saved master profile on mount
+  // Restore and sync saved master profile + fetch all registered masters from Supabase on mount
   useEffect(() => {
-    const saved = getSavedUser();
-    if (saved && saved.role === 'master') {
-      store.registerMasterInStore(saved);
-    }
+    const fetchMastersFromDatabase = async () => {
+      // 1. Sync local saved master if present
+      const saved = getSavedUser();
+      if (saved && saved.role === 'master') {
+        store.registerMasterInStore(saved);
+      }
+
+      // 2. Fetch all registered masters from Supabase profiles table
+      try {
+        const { data: dbMasters, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'master');
+
+        if (dbMasters && !error && dbMasters.length > 0) {
+          dbMasters.forEach((m) => {
+            store.registerMasterInStore({
+              id: m.id,
+              name: m.name,
+              email: m.email,
+              phone: m.phone || '',
+              role: 'master',
+              region_id: m.region_id || '',
+              district_id: m.district_id || '',
+              category_id: m.category_id || undefined,
+            });
+          });
+        }
+      } catch (e) {
+        console.warn('Supabase ustalarni yuklashda tarmoq xatosi:', e);
+      }
+    };
+
+    fetchMastersFromDatabase();
   }, []);
 
   // ── Supabase auth state listener ────────────────────────────────────

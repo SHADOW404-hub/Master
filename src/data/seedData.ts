@@ -1,4 +1,5 @@
 import type { Region, District, Category, Master, Order, Transaction, Review, AuditLog } from '../types';
+import { getAvatarSVG, getPortfolioVectorSVG } from '../utils/avatar';
 
 export const REGIONS: Region[] = [
   { id: 'reg-tashkent-city', name_uz: 'Toshkent shahri' },
@@ -127,7 +128,69 @@ export const CATEGORIES: Category[] = [
   },
 ];
 
-export const SEED_MASTERS: Master[] = [];
+export const SEED_MASTERS: Master[] = [
+  {
+    id: 'master-real-1',
+    user_id: 'usr-m1',
+    name: 'Jasurbek Otabayev',
+    phone: '+998 90 123 45 67',
+    avatar: getAvatarSVG('Jasurbek Otabayev'),
+    category_id: 'cat-santexnik',
+    category_name: 'Santexnik',
+    region_id: 'reg-khorezm',
+    district_id: 'dist-urganch',
+    bio: '10 yillik tajribaga ega professional santexnik. Barcha turdagi quvur va sanitariya ishlarini sifatli bajaraman. Kafolat beriladi.',
+    rating: 4.9,
+    reviewsCount: 38,
+    status: 'available',
+    hourlyRate: 120000,
+    completedOrders: 42,
+    passport_kyc: {
+      status: 'verified',
+      passportNumber: 'FA1234567',
+      submittedAt: '2026-08-10',
+    },
+    price_list: [
+      { id: 'p1', name: 'Kran almashtirish', price: 80000, unit: 'dona' },
+      { id: 'p2', name: 'Boyler o\'rnatish', price: 250000, unit: 'komplekt' },
+    ],
+    portfolio: [
+      {
+        id: 'port-1',
+        title: 'Yangi xonadonda vannaxona santexnikasi',
+        imageUrl: getPortfolioVectorSVG('Santexnik'),
+        description: 'Barcha quvurlar yashirin montaj qilindi va sinovdan o\'tkazildi.',
+      },
+    ],
+  },
+  {
+    id: 'master-real-2',
+    user_id: 'usr-m2',
+    name: 'Sardorbek Rahimov',
+    phone: '+998 94 987 65 43',
+    avatar: getAvatarSVG('Sardorbek Rahimov'),
+    category_id: 'cat-elektrchi',
+    category_name: 'Elektrchi',
+    region_id: 'reg-tashkent-city',
+    district_id: 'dist-yunusobod',
+    bio: 'Oliy ma\'lumotli muhandis-elektrchi. Uylar, ofislar va dokonlarda elektr simlarini sifatli montaj qilish va shit yig\'ish.',
+    rating: 4.8,
+    reviewsCount: 29,
+    status: 'available',
+    hourlyRate: 150000,
+    completedOrders: 31,
+    passport_kyc: {
+      status: 'verified',
+      passportNumber: 'FB7654321',
+      submittedAt: '2026-08-15',
+    },
+    price_list: [
+      { id: 'pe1', name: 'Elektr shiti yig\'ish', price: 350000, unit: 'dona' },
+      { id: 'pe2', name: 'Rozetka / Avtomat o\'rnatish', price: 25000, unit: 'dona' },
+    ],
+    portfolio: [],
+  },
+];
 
 export const SEED_ORDERS: Order[] = [];
 
