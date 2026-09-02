@@ -77,31 +77,30 @@ body::before {
 ::-webkit-scrollbar-thumb:hover { background: #334155; }
 
 /* ============================================================
-   GLASSMORPHISM CARDS
+   GLASSMORPHISM CARDS & CONTAINERS
    ============================================================ */
 .glass-panel {
-  background: rgba(13, 20, 36, 0.75);
+  background: rgba(10, 15, 28, 0.82);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.5), 0 0 40px -15px rgba(59, 130, 246, 0.12);
 }
 
 .glass-card {
-  background: rgba(13, 20, 36, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.3s ease,
-              border-color 0.3s ease;
+  background: rgba(13, 20, 36, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(59,130,246,0.35);
-  box-shadow: 0 20px 40px -12px rgba(37,99,235,0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 20px 40px -12px rgba(37, 99, 235, 0.25), 0 0 30px rgba(59, 130, 246, 0.15);
 }
 
 /* ============================================================
