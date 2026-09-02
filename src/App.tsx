@@ -390,25 +390,42 @@ export function App() {
             />
             <section className="max-w-7xl mx-auto pb-16">
               {store.masters.length === 0 ? (
-                <div className="glass-panel p-12 text-center text-gray-400 max-w-md mx-auto space-y-3 my-8">
-                  <Wrench className="w-12 h-12 text-gray-500 mx-auto" />
-                  <h3 className="text-lg font-bold text-white">
-                    Tanlangan hudud bo'yicha usta topilmadi
+                <div className="glass-panel p-10 text-center text-gray-400 max-w-md mx-auto space-y-4 my-8 border border-blue-500/20 rounded-3xl shadow-2xl">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto border border-blue-500/30">
+                    <Wrench className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-xl font-extrabold text-white">
+                    {store.allMasters.length === 0
+                      ? "Hozircha ro'yxatdan o'tgan ustalar mavjud emas"
+                      : "Tanlangan filtr bo'yicha usta topilmadi"}
                   </h3>
-                  <p className="text-xs text-gray-400">
-                    Iltimos, viloyat yoki tumanni almashtiring yoki qidiruv so'rovini tozalang.
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    {store.allMasters.length === 0
+                      ? "Platformaga birinchi usta bo'lib ro'yxatdan o'ting va o'z xizmatlaringizni taklif qiling!"
+                      : "Iltimos, viloyat yoki tumanni almashtiring yoki qidiruv so'rovini tozalang."}
                   </p>
-                  <button
-                    onClick={() => {
-                      store.setSelectedRegionId('');
-                      store.setSelectedDistrictId('');
-                      store.setSelectedCategory('');
-                      store.setSearchQuery('');
-                    }}
-                    className="btn-primary text-xs py-2 px-4 rounded-xl font-bold"
-                  >
-                    Filtrlarni Tozalash
-                  </button>
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
+                    {store.allMasters.length === 0 ? (
+                      <button
+                        onClick={() => setActivePage('register')}
+                        className="btn-primary text-xs py-2.5 px-6 rounded-xl font-bold"
+                      >
+                        Usta Bo'lib Ro'yxatdan O'tish
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          store.setSelectedRegionId('');
+                          store.setSelectedDistrictId('');
+                          store.setSelectedCategory('');
+                          store.setSearchQuery('');
+                        }}
+                        className="btn-primary text-xs py-2.5 px-6 rounded-xl font-bold"
+                      >
+                        Filtrlarni Tozalash
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-2">

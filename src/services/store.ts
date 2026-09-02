@@ -4,7 +4,7 @@ import type {
   Review, AuditLog, MasterWallet 
 } from '../types';
 import { 
-  REGIONS, DISTRICTS, CATEGORIES, SEED_MASTERS, 
+  REGIONS, DISTRICTS, CATEGORIES, 
   SEED_ORDERS, SEED_TRANSACTIONS, SEED_REVIEWS, SEED_AUDIT_LOGS 
 } from '../data/seedData';
 import { getAvatarSVG } from '../utils/avatar';
@@ -35,8 +35,20 @@ export function useAppStore() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Persistent States
-  const [masters, setMasters] = useState<Master[]>(() => getInitial(STORAGE_KEYS.MASTERS, SEED_MASTERS));
+  // Persistent States — Cleaned of fake demo masters
+  const [masters, setMasters] = useState<Master[]>(() => {
+    const initial = getInitial<Master[]>(STORAGE_KEYS.MASTERS, []);
+    return initial.filter(m => 
+      !m.id.startsWith('master-1') && 
+      !m.id.startsWith('master-2') && 
+      !m.id.startsWith('master-3') && 
+      !m.id.startsWith('master-4') && 
+      m.user_id !== 'usr-m1' && 
+      m.user_id !== 'usr-m2' && 
+      m.user_id !== 'usr-m3' && 
+      m.user_id !== 'usr-m4'
+    );
+  });
   const [orders, setOrders] = useState<Order[]>(() => getInitial(STORAGE_KEYS.ORDERS, SEED_ORDERS));
   const [transactions, setTransactions] = useState<Transaction[]>(() => getInitial(STORAGE_KEYS.TRANSACTIONS, SEED_TRANSACTIONS));
   const [reviews, setReviews] = useState<Review[]>(() => getInitial(STORAGE_KEYS.REVIEWS, SEED_REVIEWS));
