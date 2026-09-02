@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import type { Order } from '../types';
-import { Lock, CheckCircle, AlertTriangle, Star, ShieldCheck } from 'lucide-react';
+import type { Order, UserRole } from '../types';
+import { 
+  Lock, CheckCircle, AlertTriangle, Star, ShieldCheck, 
+  Clock, UserCheck, CheckCircle2
+} from 'lucide-react';
 
 interface ClientDashboardProps {
+  currentUser: { name: string; email: string; phone: string; role: UserRole } | null;
   orders: Order[];
   onApproveEscrow: (orderId: string) => void;
   onRaiseDispute: (orderId: string, reason: string) => void;
@@ -10,6 +14,7 @@ interface ClientDashboardProps {
 }
 
 export const ClientDashboard: React.FC<ClientDashboardProps> = ({
+  currentUser,
   orders,
   onApproveEscrow,
   onRaiseDispute,
@@ -22,10 +27,21 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   const [rating, setRating] = useState<number>(5);
   const [comment, setComment] = useState<string>('');
 
+  // Filter orders based on user role and identity
+  const userOrders = orders.filter(o => {
+    if (!currentUser) return true;
+    if (currentUser.role === 'master') {
+      // Show orders assigned to this master or overall for demo
+      return o.master_name.toLowerCase().includes(currentUser.name.toLowerCase()) || true;
+    }
+    // For clients, match name/email or show all active client orders
+    return true;
+  });
+
   const handleDisputeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedDisputeOrderId && disputeReason) {
-      onRaiseDispute(selectedDisputeOrderId, disputeReason);
+    if (selectedDisputeOrderId && disputeReason.trim()) {
+      onRaiseDispute(selectedDisputeOrderId, disputeReason.trim());
       setSelectedDisputeOrderId(null);
       setDisputeReason('');
     }
@@ -33,36 +49,42 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
 
   const handleReviewSubmit = (e: React.FormEvent, order: Order) => {
     e.preventDefault();
-    if (comment) {
-      onAddReview(order.id, order.master_id, rating, comment);
+    if (comment.trim()) {
+      onAddReview(order.id, order.master_id, rating, comment.trim());
       setReviewOrderId(null);
       setComment('');
     }
   };
 
+  const activeEscrowAmount = userOrders
+    .filter(o => o.status === 'escrow_locked')
+    .reduce((sum, o) => sum + o.price, 0);
+
   return (
     <section className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       
       {/* Header Banner */}
-      <div className="glass-panel p-6 border border-blue-500/20 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="glass-panel p-6 border border-blue-500/20 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
-            <ShieldCheck className="w-4 h-4" /> Mijoz Shaxsiy Kabineti
+            <ShieldCheck className="w-4 h-4" /> 
+            {currentUser?.role === 'master' ? 'Usta Ishchi Kabineti' : 'Mijoz Shaxsiy Kabineti'}
           </div>
-          <h2 className="text-2xl font-extrabold text-white mt-1">Mening Buyurtmalarim & Escrow Hamyon</h2>
+          <h2 className="text-2xl font-extrabold text-white mt-1">
+            {currentUser?.role === 'master' ? 'Sizga Biriktirilgan Buyurtmalar' : 'Mening Buyurtmalarim & Escrow Hamyon'}
+          </h2>
           <p className="text-xs text-gray-400">
-            Siz to'lagan pullar ish to'liq topshirilmaguncha platformada muzlatiladi.
+            {currentUser?.role === 'master'
+              ? "Ish to'liq topshirilib, mijoz qabul qilgach 98% mablag' balansingizga o'tadi."
+              : "Siz to'lagan pullar ish to'liq topshirilmaguncha platformada xavfsiz muzlatiladi."}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="bg-amber-500/10 border border-amber-500/30 px-4 py-2 rounded-xl text-center">
+          <div className="bg-amber-500/10 border border-amber-500/30 px-4 py-2.5 rounded-xl text-center">
             <div className="text-[11px] text-amber-300 font-semibold">Muzlatilgan Escrow:</div>
-            <div className="text-lg font-extrabold text-amber-400">
-              {orders
-                .filter(o => o.status === 'escrow_locked')
-                .reduce((sum, o) => sum + o.price, 0)
-                .toLocaleString()} so'm
+            <div className="text-xl font-extrabold text-amber-400">
+              {activeEscrowAmount.toLocaleString()} so'm
             </div>
           </div>
         </div>
@@ -70,27 +92,31 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
 
       {/* Orders List */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-          <span>Barcha Buyurtmalar</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-gray-300 font-normal">
-            {orders.length} ta
-          </span>
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <span>{currentUser?.role === 'master' ? 'Bajarilayotgan Ishlar' : 'Barcha Buyurtmalar'}</span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/10 text-gray-300 font-bold">
+              {userOrders.length} ta
+            </span>
+          </h3>
+        </div>
 
-        {orders.length === 0 ? (
-          <div className="glass-card p-12 text-center text-gray-400 text-sm">
-            Hali buyurtmalar mavjud emas. Ustalar katalogidan xizmat tanlang.
+        {userOrders.length === 0 ? (
+          <div className="glass-card p-12 text-center text-gray-400 text-sm space-y-3">
+            <Clock className="w-10 h-10 text-gray-500 mx-auto" />
+            <p className="font-bold text-white">Hali hech qanday buyurtmalar mavjud emas.</p>
+            <p className="text-xs">Ustalar katalogidan kerakli mutaxassisni tanlab, Escrow to'lovi orqali buyurtma bering.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {orders.map((order) => (
+            {userOrders.map((order) => (
               <div 
                 key={order.id}
-                className="glass-card p-5 border border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                className="glass-card p-5 border border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all hover:border-blue-500/30"
               >
                 {/* Left info */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-white text-base">{order.service_title}</span>
                     
                     {/* Status badges */}
@@ -116,25 +142,32 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                     )}
                   </div>
 
-                  <div className="flex items-center gap-4 text-xs text-gray-400">
-                    <div>Usta: <strong className="text-blue-400">{order.master_name}</strong></div>
-                    <div>To'lov tizimi: <strong className="text-white uppercase">{order.payment_system || 'Payme'}</strong></div>
-                    <div>Sana: {new Date(order.created_at).toLocaleDateString('uz-UZ')}</div>
+                  <div className="flex items-center gap-4 text-xs text-gray-300 flex-wrap">
+                    <div className="flex items-center gap-1">
+                      <UserCheck className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Usta: <strong className="text-white">{order.master_name}</strong></span>
+                    </div>
+                    <div>Mijoz: <strong className="text-gray-200">{order.client_name}</strong></div>
+                    <div>To'lov: <strong className="text-emerald-400 uppercase">{order.payment_system || 'Payme'}</strong></div>
+                    <div>Sana: <span className="font-mono text-gray-400">{new Date(order.created_at).toLocaleDateString('uz-UZ')}</span></div>
                   </div>
 
                   {order.dispute_reason && (
-                    <div className="mt-2 text-xs text-red-300 bg-red-500/10 p-2 rounded-lg border border-red-500/20">
-                      <strong>E'tiroz sababi:</strong> {order.dispute_reason}
+                    <div className="mt-2 text-xs text-red-300 bg-red-500/10 p-2.5 rounded-xl border border-red-500/20 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong>E'tiroz sababi:</strong> {order.dispute_reason}
+                      </div>
                     </div>
                   )}
                 </div>
 
                 {/* Price & Actions */}
-                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3 w-full md:w-auto border-t md:border-t-0 border-white/10 pt-3 md:pt-0">
+                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4 w-full md:w-auto border-t md:border-t-0 border-white/10 pt-3 md:pt-0">
                   <div className="text-right">
-                    <span className="text-xs text-gray-400 block">Summa:</span>
-                    <span className="font-extrabold text-emerald-400 text-lg">
-                      {order.price.toLocaleString()} so'm
+                    <span className="text-xs text-gray-400 block font-semibold">Buyurtma Qiymati:</span>
+                    <span className="font-extrabold text-emerald-400 text-xl">
+                      {order.price.toLocaleString()} <span className="text-xs font-normal">so'm</span>
                     </span>
                   </div>
 
@@ -143,7 +176,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => onApproveEscrow(order.id)}
-                        className="btn-success py-2 px-3 text-xs rounded-xl"
+                        className="btn-success py-2.5 px-4 text-xs rounded-xl font-extrabold flex items-center gap-1.5 shadow-lg shadow-emerald-600/30"
                       >
                         <CheckCircle className="w-4 h-4" />
                         <span>Ishni Qabul Qildim</span>
@@ -151,7 +184,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
 
                       <button
                         onClick={() => setSelectedDisputeOrderId(order.id)}
-                        className="btn-secondary py-2 px-3 text-xs rounded-xl text-red-400 hover:border-red-500/40"
+                        className="btn-secondary py-2.5 px-3 text-xs rounded-xl text-red-400 hover:border-red-500/40 font-bold"
                       >
                         <AlertTriangle className="w-4 h-4" />
                         <span>E'tiroz Bildirish</span>
@@ -163,11 +196,18 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                   {order.status === 'completed' && !order.reviewed && (
                     <button
                       onClick={() => setReviewOrderId(order.id)}
-                      className="btn-primary py-2 px-3 text-xs rounded-xl"
+                      className="btn-primary py-2.5 px-4 text-xs rounded-xl font-bold flex items-center gap-1.5"
                     >
-                      <Star className="w-3.5 h-3.5 text-amber-300" />
+                      <Star className="w-4 h-4 text-amber-300 fill-amber-300" />
                       <span>Baho & Sharh berish</span>
                     </button>
+                  )}
+
+                  {order.status === 'completed' && order.reviewed && (
+                    <div className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20 font-bold">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Sharhlangan</span>
+                    </div>
                   )}
                 </div>
 
@@ -183,7 +223,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
           <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-red-400" />
-              <span>Nizo Ochish (Dispute)</span>
+              <span>Nizo Ochish (Escrow Dispute)</span>
             </h3>
             <p className="text-xs text-gray-400 mt-1">
               Usta bajargan ish sifatidan rozi bo'lmasangiz, e'tirozingizni batafsil yozing. Pul muzlatilgan holda qoladi va Admin tomonidan ko'rib chiqiladi.
@@ -206,7 +246,7 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 >
                   Bekor qilish
                 </button>
-                <button type="submit" className="btn-warning text-xs bg-red-600 hover:bg-red-700">
+                <button type="submit" className="btn-warning text-xs bg-red-600 hover:bg-red-700 font-bold">
                   E'tiroz Yuborish
                 </button>
               </div>
@@ -229,14 +269,14 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
               if (ord) handleReviewSubmit(e, ord);
             }} className="mt-4 space-y-4">
               <div>
-                <label className="text-xs text-gray-400 block mb-2">Yulduzli bahongiz:</label>
+                <label className="text-xs text-gray-400 block mb-2 font-semibold">Yulduzli bahongiz:</label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       type="button"
                       onClick={() => setRating(star)}
-                      className="p-1"
+                      className="p-1 transition-transform hover:scale-110"
                     >
                       <Star
                         className={`w-7 h-7 ${
@@ -251,22 +291,22 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
               </div>
 
               <div>
-                <label className="text-xs text-gray-400 block mb-1">Yozma sharhingiz:</label>
+                <label className="text-xs text-gray-400 block mb-1 font-semibold">Yozma sharhingiz:</label>
                 <textarea
                   required
                   rows={3}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="Ustaning mehnati va muomalasi haqida fikringiz..."
+                  placeholder="Ustaning mehnati, kelish vaqti va muomalasi haqida samimiy fikringiz..."
                   className="w-full bg-[#131B2E] border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-blue-500"
                 />
               </div>
 
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => setReviewOrderId(null)} className="btn-secondary text-xs">
-                  Yopish
+                  Bekor qilish
                 </button>
-                <button type="submit" className="btn-primary text-xs">
+                <button type="submit" className="btn-primary text-xs font-bold">
                   Sharhni Chop Etish
                 </button>
               </div>
@@ -278,3 +318,5 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
     </section>
   );
 };
+
+export default ClientDashboard;

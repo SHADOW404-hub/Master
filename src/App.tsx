@@ -16,7 +16,7 @@ import { ToastContainer } from './components/Toast';
 import type { ToastMessage } from './components/Toast';
 import type { Master, UserRole } from './types';
 import { Shield, Lock, Wrench } from 'lucide-react';
-import { supabase, onAuthStateChange } from './services/supabase';
+import { supabase, onAuthStateChange, authSignOut } from './services/supabase';
 
 // All possible page views
 type PageView =
@@ -161,7 +161,7 @@ export function App() {
 
   const handleLogout = async () => {
     try {
-      await import('./services/supabase').then(m => m.authSignOut());
+      await authSignOut();
     } catch { /* ignore */ }
     setCurrentUser(null);
     localStorage.removeItem(STORAGE_KEY);
@@ -185,7 +185,8 @@ export function App() {
         escrowCheckoutData.master,
         escrowCheckoutData.serviceTitle,
         escrowCheckoutData.price,
-        paymentSystem
+        paymentSystem,
+        currentUser
       );
       addToast(
         'escrow',
@@ -350,6 +351,7 @@ export function App() {
         {/* VIEW: ORDERS */}
         {activePage === 'orders' && (
           <ClientDashboard
+            currentUser={currentUser}
             orders={store.orders}
             onApproveEscrow={(id) => {
               store.approveAndReleaseEscrow(id);
@@ -360,7 +362,7 @@ export function App() {
               addToast('warning', 'Nizo Ochildi!', 'Order muzlatildi va Admin Desk ko\'rib chiqishga olindi.');
             }}
             onAddReview={(ordId, mId, rat, comm) => {
-              store.addReview(ordId, mId, rat, comm);
+              store.addReview(ordId, mId, rat, comm, currentUser);
               addToast('info', 'Sharh Chop Etildi', 'Ustaga yulduzli bahongiz muvaffaqiyatli saqlandi.');
             }}
           />
@@ -378,9 +380,17 @@ export function App() {
               store.toggleMasterStatus(mId);
               addToast('info', 'Status O\'zgardi', 'Profil ish statusi muvaffaqiyatli yangilandi.');
             }}
+            onUpdateMasterProfile={(mId, updates) => {
+              store.updateMasterProfile(mId, updates);
+              addToast('success', 'Profil Yangilandi', "Usta xizmat ma'lumotlari saqlandi.");
+            }}
             onSubmitKYC={(mId, pass, photo) => {
               store.submitMasterKYC(mId, pass, photo);
               addToast('info', 'KYC Yuborildi', 'Pasport ma\'lumotlaringiz moderatorlarga tekshiruvga yuborildi.');
+            }}
+            onWithdrawMoney={(mId, amount, card) => {
+              store.withdrawMasterBalance(mId, amount, card);
+              addToast('success', 'Pul Yechildi', `${amount.toLocaleString()} so'm ${card} kartasiga o'tkazildi.`);
             }}
             onOpenAuth={() => setActivePage('login')}
             onLogout={handleLogout}
@@ -470,3 +480,4 @@ export function App() {
 }
 
 export default App;
+

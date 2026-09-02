@@ -110,7 +110,8 @@ export function useAppStore() {
     master: Master, 
     serviceTitle: string, 
     price: number, 
-    paymentSystem: 'payme' | 'click'
+    paymentSystem: 'payme' | 'click',
+    clientUser?: { id?: string; name: string; email?: string } | null
   ) => {
     const orderId = `ord-${Date.now()}`;
     const now = new Date().toISOString();
@@ -118,10 +119,13 @@ export function useAppStore() {
     const commission = Math.round(price * 0.02); // 2% platform fee
     const payout = price - commission; // 98% master payout
 
+    const clientId = clientUser?.id || clientUser?.email || 'usr-current';
+    const clientName = clientUser?.name || 'Mijoz';
+
     const newOrder: Order = {
       id: orderId,
-      client_id: 'usr-current-client',
-      client_name: 'Sardor Azimov (Mijoz)',
+      client_id: clientId,
+      client_name: clientName,
       master_id: master.id,
       master_name: master.name,
       service_title: serviceTitle,
@@ -134,7 +138,7 @@ export function useAppStore() {
     const newTransaction: Transaction = {
       id: `trx-${Date.now()}`,
       order_id: orderId,
-      client_name: 'Sardor Azimov (Mijoz)',
+      client_name: clientName,
       master_name: master.name,
       amount: price,
       commission_amount: commission,
@@ -184,12 +188,19 @@ export function useAppStore() {
   };
 
   // 5. Submit Review & Rating
-  const addReview = (orderId: string, masterId: string, rating: number, comment: string) => {
+  const addReview = (
+    orderId: string, 
+    masterId: string, 
+    rating: number, 
+    comment: string, 
+    clientUser?: { name: string; email?: string } | null
+  ) => {
+    const clientName = clientUser?.name || 'Mijoz';
     const newRev: Review = {
       id: `rev-${Date.now()}`,
       order_id: orderId,
-      client_id: 'usr-current-client',
-      client_name: 'Sardor Azimov',
+      client_id: clientUser?.email || 'usr-current',
+      client_name: clientName,
       master_id: masterId,
       rating,
       comment,
@@ -222,6 +233,19 @@ export function useAppStore() {
       if (m.id === masterId) {
         const newStatus = m.status === 'available' ? 'busy' : 'available';
         return { ...m, status: newStatus };
+      }
+      return m;
+    }));
+  };
+
+  // Update Master Details (Bio, Hourly rate, Skills)
+  const updateMasterProfile = (
+    masterId: string, 
+    updates: Partial<Pick<Master, 'bio' | 'hourlyRate' | 'name'>>
+  ) => {
+    setMasters(prev => prev.map(m => {
+      if (m.id === masterId) {
+        return { ...m, ...updates };
       }
       return m;
     }));
@@ -283,6 +307,26 @@ export function useAppStore() {
     }
   };
 
+  // Withdraw Money from Master Wallet
+  const withdrawMasterBalance = (masterId: string, amount: number, cardNumber: string) => {
+    const now = new Date().toISOString();
+    const payoutTrx: Transaction = {
+      id: `payout-${Date.now()}`,
+      order_id: `payout-ref-${Date.now()}`,
+      client_name: 'Platforma Yechib Olish',
+      master_name: masterId,
+      amount: amount,
+      commission_amount: 0,
+      master_payout_amount: amount,
+      status: 'released_to_master',
+      payment_system: cardNumber.startsWith('9860') ? 'click' : 'payme',
+      created_at: now,
+      released_at: now,
+    };
+
+    setTransactions(prev => [payoutTrx, ...prev]);
+  };
+
   // 10. Financial Statistics Calculator
   const getFinancialStats = () => {
     let totalGMV = 0; // Gross Merchandise Volume
@@ -328,13 +372,20 @@ export function useAppStore() {
       }
     });
 
+    // Subtract manual payouts
+    const manualPayouts = transactions
+      .filter(t => t.client_name === 'Platforma Yechib Olish' && t.master_name === masterId)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    available_balance = Math.max(0, available_balance - manualPayouts);
+
     return {
       master_id: masterId,
       total_earned,
       available_balance,
       pending_escrow,
       total_commission_paid,
-      withdrawn: 0,
+      withdrawn: manualPayouts,
       payout_requests: [],
     };
   };
@@ -369,10 +420,13 @@ export function useAppStore() {
     raiseDispute,
     addReview,
     toggleMasterStatus,
+    updateMasterProfile,
     submitMasterKYC,
     moderateKYC,
     resolveDispute,
+    withdrawMasterBalance,
     getFinancialStats,
     getMasterWallet,
   };
 }
+
