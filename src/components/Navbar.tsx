@@ -2,14 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { UserRole, Region, District } from '../types';
 import {
   ShieldCheck, MapPin, Wrench, Lock, LogIn,
-  Home, User, Menu, X, LogOut, Settings,
+  Home, User, Menu, X, LogOut, Settings, Briefcase,
 } from 'lucide-react';
 
 interface NavbarProps {
   activeRole: UserRole;
   setActiveRole: (role: UserRole) => void;
-  activeTab: 'catalog' | 'orders' | 'profile' | 'admin_panel';
-  setActiveTab: (tab: 'catalog' | 'orders' | 'profile' | 'admin_panel') => void;
+  activeTab: 'catalog' | 'jobs' | 'orders' | 'profile' | 'admin_panel';
+  setActiveTab: (tab: 'catalog' | 'jobs' | 'orders' | 'profile' | 'admin_panel') => void;
   regions: Region[];
   districts: District[];
   selectedRegionId: string;
@@ -17,6 +17,7 @@ interface NavbarProps {
   selectedDistrictId: string;
   setSelectedDistrictId: (id: string) => void;
   escrowOrdersCount: number;
+  openJobsCount?: number;
   currentUser: { name: string; phone: string; role: UserRole } | null;
   onOpenAuth: () => void;
   onLogout: () => void;
@@ -32,6 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   setSelectedRegionId,
   setSelectedDistrictId,
   escrowOrdersCount,
+  openJobsCount,
   currentUser,
   onOpenAuth,
   onLogout,
@@ -66,6 +68,17 @@ export const Navbar: React.FC<NavbarProps> = ({
       onClick: () => {
         setActiveRole('client');
         setActiveTab('catalog');
+        setMobileMenuOpen(false);
+      },
+    },
+    {
+      id: 'jobs' as const,
+      label: currentUser?.role === 'master' ? 'Mijozlar Ishlari' : 'Ish E\'lonlari',
+      icon: Briefcase,
+      color: 'indigo',
+      badge: openJobsCount && openJobsCount > 0 ? openJobsCount : undefined,
+      onClick: () => {
+        setActiveTab('jobs');
         setMobileMenuOpen(false);
       },
     },

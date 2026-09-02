@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import type { 
   UserRole, Master, Order, Transaction, 
-  Review, AuditLog, MasterWallet 
+  Review, AuditLog, MasterWallet, JobRequest 
 } from '../types';
 import { 
   REGIONS, DISTRICTS, CATEGORIES, 
   SEED_ORDERS, SEED_TRANSACTIONS, SEED_REVIEWS, SEED_AUDIT_LOGS 
 } from '../data/seedData';
-import { getAvatarSVG } from '../utils/avatar';
+import { getAvatarSVG, getPortfolioVectorSVG } from '../utils/avatar';
 
 const STORAGE_KEYS = {
   MASTERS: 'usta_mijoz_masters',
@@ -16,6 +16,7 @@ const STORAGE_KEYS = {
   REVIEWS: 'usta_mijoz_reviews',
   AUDITS: 'usta_mijoz_audits',
   PAYOUTS: 'usta_mijoz_payouts',
+  JOB_REQUESTS: 'usta_mijoz_job_requests',
 };
 
 // Helper for initial load
@@ -53,6 +54,7 @@ export function useAppStore() {
   const [transactions, setTransactions] = useState<Transaction[]>(() => getInitial(STORAGE_KEYS.TRANSACTIONS, SEED_TRANSACTIONS));
   const [reviews, setReviews] = useState<Review[]>(() => getInitial(STORAGE_KEYS.REVIEWS, SEED_REVIEWS));
   const [audits, setAudits] = useState<AuditLog[]>(() => getInitial(STORAGE_KEYS.AUDITS, SEED_AUDIT_LOGS));
+  const [jobRequests, setJobRequests] = useState<JobRequest[]>(() => getInitial(STORAGE_KEYS.JOB_REQUESTS, []));
 
   // Sync to localStorage
   useEffect(() => {
@@ -74,6 +76,10 @@ export function useAppStore() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.AUDITS, JSON.stringify(audits));
   }, [audits]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.JOB_REQUESTS, JSON.stringify(jobRequests));
+  }, [jobRequests]);
 
   // Admin logger helper
   const addAuditLog = (adminName: string, action: string, details: string) => {
@@ -419,6 +425,81 @@ export function useAppStore() {
     setTransactions(prev => [payoutTrx, ...prev]);
   };
 
+  // 11. Client Job Request Posting ("Ish Qoldirish")
+  const createJobRequest = (data: {
+    title: string;
+    description: string;
+    price: number;
+    category_id: string;
+    region_id: string;
+    district_id?: string;
+    image_url?: string;
+    clientUser: { id?: string; name: string; phone?: string; email?: string };
+  }) => {
+    const categoryObj = CATEGORIES.find(c => c.id === data.category_id) || CATEGORIES[0];
+    const newJob: JobRequest = {
+      id: `job-${Date.now()}`,
+      client_id: data.clientUser.id || data.clientUser.email || 'usr-current',
+      client_name: data.clientUser.name,
+      client_phone: data.clientUser.phone || '+998 90 123 45 67',
+      title: data.title,
+      description: data.description,
+      price: data.price,
+      category_id: data.category_id,
+      category_name: categoryObj.name_uz,
+      region_id: data.region_id,
+      district_id: data.district_id || '',
+      image_url: data.image_url || getPortfolioVectorSVG(categoryObj.name_uz),
+      status: 'open',
+      created_at: new Date().toISOString(),
+    };
+
+    setJobRequests(prev => [newJob, ...prev]);
+    return newJob;
+  };
+
+  // 12. Master Accepts Client Job Request ("Ishni Qabul Qilish & Borish Vaqti")
+  const acceptJobRequest = (
+    jobId: string,
+    master: Master,
+    arrivalTime: string
+  ) => {
+    const now = new Date().toISOString();
+    let acceptedJob: JobRequest | undefined;
+
+    setJobRequests(prev => prev.map(job => {
+      if (job.id === jobId) {
+        acceptedJob = {
+          ...job,
+          status: 'accepted',
+          accepted_by_master_id: master.id,
+          accepted_by_master_name: master.name,
+          accepted_by_master_phone: master.phone,
+          arrival_time: arrivalTime,
+          accepted_at: now,
+        };
+        return acceptedJob;
+      }
+      return job;
+    }));
+
+    // Auto-create Escrow order between Client and Master for accepted job request
+    if (acceptedJob) {
+      createEscrowOrder(
+        master,
+        acceptedJob.title,
+        acceptedJob.price,
+        'payme',
+        { id: acceptedJob.client_id, name: acceptedJob.client_name }
+      );
+    }
+  };
+
+  // 13. Cancel / Delete Job Request
+  const cancelJobRequest = (jobId: string) => {
+    setJobRequests(prev => prev.filter(job => job.id !== jobId));
+  };
+
   // 10. Financial Statistics Calculator
   const getFinancialStats = () => {
     let totalGMV = 0; // Gross Merchandise Volume (only customer orders)
@@ -513,6 +594,7 @@ export function useAppStore() {
     transactions,
     reviews,
     audits,
+    jobRequests,
     
     // Actions
     registerMasterInStore,
@@ -528,6 +610,9 @@ export function useAppStore() {
     withdrawMasterBalance,
     getFinancialStats,
     getMasterWallet,
+    createJobRequest,
+    acceptJobRequest,
+    cancelJobRequest,
   };
 }
 

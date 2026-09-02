@@ -162,3 +162,25 @@ export interface AuditLog {
   ip_address: string;
   created_at: string;
 }
+
+export interface JobRequest {
+  id: string;
+  client_id: string;
+  client_name: string;
+  client_phone: string;
+  title: string;
+  description: string;
+  price: number;
+  category_id: string;
+  category_name: string;
+  region_id: string;
+  district_id?: string;
+  image_url?: string;
+  status: 'open' | 'accepted' | 'completed' | 'cancelled';
+  accepted_by_master_id?: string;
+  accepted_by_master_name?: string;
+  accepted_by_master_phone?: string;
+  arrival_time?: string;
+  accepted_at?: string;
+  created_at: string;
+}

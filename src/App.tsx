@@ -12,6 +12,7 @@ import { MasterDetailModal } from './components/MasterDetailModal';
 import { EscrowCheckoutModal } from './components/EscrowCheckoutModal';
 import { ClientDashboard } from './components/ClientDashboard';
 import { AdminPanel } from './components/AdminPanel';
+import { JobBoard } from './components/JobBoard';
 import { ToastContainer } from './components/Toast';
 import type { ToastMessage } from './components/Toast';
 import type { Master, UserRole } from './types';
@@ -25,6 +26,7 @@ type PageView =
   | 'register'
   | 'forgot'
   | 'catalog'
+  | 'jobs'
   | 'orders'
   | 'profile'
   | 'admin_panel';
@@ -41,7 +43,7 @@ export interface CurrentUser {
 }
 
 const STORAGE_KEY = 'usta_mijoz_current_user';
-const PUBLIC_PAGES: PageView[] = ['landing', 'login', 'register', 'forgot', 'catalog', 'profile'];
+const PUBLIC_PAGES: PageView[] = ['landing', 'login', 'register', 'forgot', 'catalog', 'jobs', 'profile'];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function getSavedUser(): CurrentUser | null {
@@ -345,11 +347,13 @@ export function App() {
   }
 
   // Navbar uchun activeTab
-  const navTab = (['catalog', 'orders', 'profile', 'admin_panel'] as const).includes(
-    activePage as 'catalog' | 'orders' | 'profile' | 'admin_panel'
+  const navTab = (['catalog', 'jobs', 'orders', 'profile', 'admin_panel'] as const).includes(
+    activePage as 'catalog' | 'jobs' | 'orders' | 'profile' | 'admin_panel'
   )
-    ? (activePage as 'catalog' | 'orders' | 'profile' | 'admin_panel')
+    ? (activePage as 'catalog' | 'jobs' | 'orders' | 'profile' | 'admin_panel')
     : 'catalog';
+
+  const openJobsCount = store.jobRequests.filter(j => j.status === 'open').length;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#070A12] text-gray-100 font-sans selection:bg-blue-600 selection:text-white">
@@ -368,6 +372,7 @@ export function App() {
         selectedDistrictId={store.selectedDistrictId}
         setSelectedDistrictId={store.setSelectedDistrictId}
         escrowOrdersCount={escrowOrdersCount}
+        openJobsCount={openJobsCount}
         currentUser={currentUser}
         onOpenAuth={() => setActivePage('login')}
         onLogout={handleLogout}
@@ -442,6 +447,45 @@ export function App() {
               )}
             </section>
           </div>
+        )}
+
+        {/* VIEW: JOB BOARD */}
+        {activePage === 'jobs' && (
+          <JobBoard
+            currentUser={currentUser}
+            currentMaster={currentMaster}
+            jobRequests={store.jobRequests}
+            categories={store.categories}
+            regions={store.regions}
+            allDistricts={store.allDistricts}
+            selectedRegionId={store.selectedRegionId}
+            onAcceptJob={(jobId, master, arrivalTime) => {
+              store.acceptJobRequest(jobId, master, arrivalTime);
+              addToast(
+                'escrow',
+                'Ish Qabul Qilindi!',
+                `Mijozga xabar berildi va borish vaqti (${arrivalTime}) saqlandi. To'lov platformada muzlatildi.`
+              );
+            }}
+            onCreateJob={(jobData) => {
+              if (currentUser) {
+                store.createJobRequest({
+                  ...jobData,
+                  clientUser: currentUser,
+                });
+                addToast(
+                  'success',
+                  'Ish E\'lon Qilindi!',
+                  'Ishingiz muvaffaqiyatli e\'longa joylandi. Ustalar borish vaqtini belgilab qabul qilishadi.'
+                );
+              }
+            }}
+            onCancelJob={(jobId) => {
+              store.cancelJobRequest(jobId);
+              addToast('info', 'E\'lon O\'chirildi', 'Ish e\'loningiz muvaffaqiyatli o\'chirildi.');
+            }}
+            onOpenAuth={() => setActivePage('login')}
+          />
         )}
 
         {/* VIEW: ORDERS */}
