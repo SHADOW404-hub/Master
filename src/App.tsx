@@ -100,10 +100,13 @@ export function App() {
   useEffect(() => {
     const { data: { subscription } } = onAuthStateChange(async (authUser) => {
       if (!authUser) {
-        // Session tugadi — localStorage'ni ham tozala
+        // Session tugadi — faqat avval login qilingan bo'lsa landingga o'tadi
+        const hadSavedUser = Boolean(localStorage.getItem(STORAGE_KEY));
         clearUser();
         setCurrentUser(null);
-        setActivePage('landing');
+        if (hadSavedUser) {
+          setActivePage('landing');
+        }
         return;
       }
 

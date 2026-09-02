@@ -29,7 +29,7 @@ const getInitial = <T>(key: string, seed: T): T => {
 
 export function useAppStore() {
   const [activeRole, setActiveRole] = useState<UserRole>('client');
-  const [selectedRegionId, setSelectedRegionId] = useState<string>('reg-khorezm');
+  const [selectedRegionId, setSelectedRegionId] = useState<string>('');
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
