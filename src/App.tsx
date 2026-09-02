@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useAppStore } from './services/store';
 import { Navbar } from './components/Navbar';
-import { AuthModal } from './components/AuthModal';
+import { AuthLanding } from './components/AuthLanding';
+import { ProfilePage } from './components/ProfilePage';
 import { HeroSearch } from './components/HeroSearch';
 import { MasterCard } from './components/MasterCard';
 import { MasterDetailModal } from './components/MasterDetailModal';
 import { EscrowCheckoutModal } from './components/EscrowCheckoutModal';
 import { ClientDashboard } from './components/ClientDashboard';
-import { MasterDashboard } from './components/MasterDashboard';
 import { AdminPanel } from './components/AdminPanel';
 import { ToastContainer } from './components/Toast';
 import type { ToastMessage } from './components/Toast';
@@ -17,7 +17,6 @@ import { Shield, Lock, Wrench } from 'lucide-react';
 export function App() {
   const store = useAppStore();
 
-  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<{
     name: string;
     phone: string;
@@ -27,7 +26,11 @@ export function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [activeTab, setActiveTab] = useState<'catalog' | 'orders' | 'master_workspace' | 'admin_panel'>('catalog');
+  // Active view tab state ('auth' | 'catalog' | 'orders' | 'profile' | 'admin_panel')
+  const [activeTab, setActiveTab] = useState<'auth' | 'catalog' | 'orders' | 'profile' | 'admin_panel'>(() => {
+    const savedUser = localStorage.getItem('usta_mijoz_current_user');
+    return savedUser ? 'catalog' : 'auth'; // Default to Auth Landing if not logged in
+  });
 
   // Toasts State
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -59,7 +62,8 @@ export function App() {
 
   const handleInitiateEscrow = (master: Master, serviceTitle: string, price: number) => {
     if (!currentUser) {
-      setIsAuthOpen(true);
+      setActiveTab('auth');
+      addToast('info', 'Tizimga Kirish Shart', 'Buyurtma berish uchun iltimos kiring yoki ro\'yxatdan o\'ting.');
       return;
     }
     setSelectedMasterForDetail(null);
@@ -97,14 +101,32 @@ export function App() {
     store.setActiveRole(userData.role);
     store.setSelectedRegionId(userData.region_id);
     store.setSelectedDistrictId(userData.district_id);
-    addToast('success', 'Muvaffaqiyatli Kirildi!', `Xush kelibsiz, ${userData.name}!`);
+    setActiveTab('catalog');
+    addToast('success', 'Xush Kelibsiz!', `${userData.name}, platformadan xavfsiz foydalanishingiz mumkin.`);
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('usta_mijoz_current_user');
+    setActiveTab('auth');
     addToast('info', 'Tizimdan Chiqildi', 'Xavfsiz ravishda chiqdingiz.');
   };
+
+  // If activeTab is 'auth', show full-screen Auth Landing page
+  if (activeTab === 'auth' && !currentUser) {
+    return (
+      <div className="min-h-screen bg-[#070A12] text-gray-100 font-sans">
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
+        <AuthLanding
+          regions={store.regions}
+          allDistricts={store.allDistricts}
+          categories={store.categories}
+          onLoginSuccess={handleLoginSuccess}
+          onBrowseGuest={() => setActiveTab('catalog')}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#070A12] text-gray-100 font-sans selection:bg-blue-600 selection:text-white">
@@ -116,8 +138,8 @@ export function App() {
       <Navbar
         activeRole={store.activeRole}
         setActiveRole={store.setActiveRole}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        activeTab={activeTab === 'auth' ? 'catalog' : activeTab}
+        setActiveTab={(tab) => setActiveTab(tab)}
         regions={store.regions}
         districts={store.districts}
         selectedRegionId={store.selectedRegionId}
@@ -126,14 +148,14 @@ export function App() {
         setSelectedDistrictId={store.setSelectedDistrictId}
         escrowOrdersCount={escrowOrdersCount}
         currentUser={currentUser}
-        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAuth={() => setActiveTab('auth')}
         onLogout={handleLogout}
       />
 
-      {/* MAIN MARKETPLACE CONTENT */}
+      {/* MAIN VIEW ROUTER */}
       <main className="flex-1">
         
-        {/* TAB 1: CATALOG & HERO SEARCH */}
+        {/* VIEW 1: CATALOG & MARKETPLACE SEARCH */}
         {activeTab === 'catalog' && (
           <div>
             <HeroSearch
@@ -183,7 +205,7 @@ export function App() {
           </div>
         )}
 
-        {/* TAB 2: MY ESCROW ORDERS */}
+        {/* VIEW 2: MY ESCROW ORDERS */}
         {activeTab === 'orders' && (
           <ClientDashboard
             orders={store.orders}
@@ -202,11 +224,14 @@ export function App() {
           />
         )}
 
-        {/* TAB 3: MASTER WORKSPACE */}
-        {activeTab === 'master_workspace' && (
-          <MasterDashboard
+        {/* VIEW 3: STANDALONE PROFILE PAGE */}
+        {activeTab === 'profile' && (
+          <ProfilePage
+            currentUser={currentUser}
             master={currentMaster}
             wallet={masterWallet}
+            regions={store.regions}
+            allDistricts={store.allDistricts}
             onToggleStatus={(mId) => {
               store.toggleMasterStatus(mId);
               addToast('info', 'Status O\'zgardi', 'Profil ish statusi muvaffaqiyatli yangilandi.');
@@ -215,10 +240,12 @@ export function App() {
               store.submitMasterKYC(mId, pass, photo);
               addToast('info', 'KYC Yuborildi', 'Pasport ma\'lumotlaringiz moderatorlarga tekshiruvga yuborildi.');
             }}
+            onOpenAuth={() => setActiveTab('auth')}
+            onLogout={handleLogout}
           />
         )}
 
-        {/* TAB 4: ADMIN CONTROL PANEL */}
+        {/* VIEW 4: DUAL ADMIN DESK */}
         {activeTab === 'admin_panel' && (
           <AdminPanel
             masters={store.allMasters}
@@ -246,16 +273,7 @@ export function App() {
 
       </main>
 
-      {/* MODAL WINDOWS */}
-      <AuthModal
-        regions={store.regions}
-        allDistricts={store.allDistricts}
-        categories={store.categories}
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
-
+      {/* MODALS */}
       {selectedMasterForDetail && (
         <MasterDetailModal
           master={selectedMasterForDetail}

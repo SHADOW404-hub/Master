@@ -1,14 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { UserRole, Region, District } from '../types';
 import { 
-  ShieldCheck, MapPin, Wrench, Lock, LogIn, Home 
+  ShieldCheck, MapPin, Wrench, Lock, LogIn, Home, User, Menu, X 
 } from 'lucide-react';
 
 interface NavbarProps {
   activeRole: UserRole;
   setActiveRole: (role: UserRole) => void;
-  activeTab: 'catalog' | 'orders' | 'master_workspace' | 'admin_panel';
-  setActiveTab: (tab: 'catalog' | 'orders' | 'master_workspace' | 'admin_panel') => void;
+  activeTab: 'catalog' | 'orders' | 'profile' | 'admin_panel';
+  setActiveTab: (tab: 'catalog' | 'orders' | 'profile' | 'admin_panel') => void;
   regions: Region[];
   districts: District[];
   selectedRegionId: string;
@@ -22,7 +22,6 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  activeRole,
   setActiveRole,
   activeTab,
   setActiveTab,
@@ -35,12 +34,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
   onLogout,
 }) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+
   return (
     <header className="sticky top-0 z-50 glass-panel border-b border-white/10 px-4 lg:px-8 py-3.5 transition-all shadow-2xl">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         
         {/* Left Brand Logo & Escrow Badge */}
-        <div className="flex items-center justify-between w-full md:w-auto">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 md:hidden"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
           <div 
             className="flex items-center gap-3 cursor-pointer group"
             onClick={() => {
@@ -62,21 +70,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   2% ESCROW
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400 font-medium">O'zbekiston xizmatlar platformasi</p>
+              <p className="text-[11px] text-gray-400 font-medium hidden sm:block">O'zbekiston xizmatlar platformasi</p>
             </div>
           </div>
-
-          {/* Mobile Escrow Badge */}
-          {escrowOrdersCount > 0 && (
-            <div className="md:hidden flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-xl text-amber-400 text-xs font-bold">
-              <Lock className="w-3.5 h-3.5 animate-pulse" />
-              <span>{escrowOrdersCount} Muzlatilgan</span>
-            </div>
-          )}
         </div>
 
-        {/* Center Main Navigation Route Tabs */}
-        <div className="flex items-center gap-1.5 bg-black/50 p-1.5 rounded-2xl border border-white/10 overflow-x-auto max-w-full">
+        {/* Center Main Navigation Route Tabs (Desktop) */}
+        <div className="hidden md:flex items-center gap-1.5 bg-black/50 p-1.5 rounded-2xl border border-white/10">
           
           <button
             onClick={() => {
@@ -84,7 +84,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               setActiveTab('catalog');
             }}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              activeTab === 'catalog' && activeRole === 'client'
+              activeTab === 'catalog'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40'
                 : 'text-gray-300 hover:text-white hover:bg-white/5'
             }`}
@@ -115,17 +115,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => {
-              setActiveRole('master');
-              setActiveTab('master_workspace');
+              setActiveTab('profile');
             }}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              activeRole === 'master'
+              activeTab === 'profile'
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/40'
                 : 'text-gray-300 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Wrench className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Usta Kabineti</span>
+            <User className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Mening Profilim</span>
           </button>
 
           <button
@@ -134,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               setActiveTab('admin_panel');
             }}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-              activeRole === 'admin'
+              activeTab === 'admin_panel'
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/40'
                 : 'text-gray-300 hover:text-white hover:bg-white/5'
             }`}
@@ -146,11 +145,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right Region Dropdown & User Profile */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+        <div className="flex items-center gap-3">
           
           {/* Region Dropdown */}
-          <div className="flex items-center gap-1.5 bg-black/40 p-1.5 rounded-xl border border-white/10 text-xs">
-            <MapPin className="w-3.5 h-3.5 text-red-400 shrink-0" />
+          <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10 text-xs">
+            <MapPin className="w-3.5 h-3.5 text-red-400 shrink-0 ml-1" />
             
             <select
               value={selectedRegionId}
@@ -172,15 +171,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* User Profile / Auth Button */}
           {currentUser ? (
             <div className="flex items-center gap-2">
-              <div className="glass-card px-3 py-1.5 rounded-xl border border-blue-500/30 flex items-center gap-2 text-xs">
+              <button
+                onClick={() => setActiveTab('profile')}
+                className="glass-card px-3 py-1.5 rounded-xl border border-blue-500/30 flex items-center gap-2 text-xs font-bold text-white hover:border-blue-500"
+              >
                 <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[10px]">
                   {currentUser.name.substring(0, 1)}
                 </div>
-                <span className="font-bold text-white hidden sm:inline">{currentUser.name}</span>
-              </div>
+                <span className="hidden sm:inline">{currentUser.name}</span>
+              </button>
+
               <button
                 onClick={onLogout}
-                className="text-xs text-red-400 hover:text-red-300 bg-red-500/10 p-2 rounded-xl border border-red-500/20 font-bold"
+                className="text-xs text-red-400 hover:text-red-300 bg-red-500/10 p-2 rounded-xl border border-red-500/20 font-bold hidden sm:block"
                 title="Tizimdan chiqish"
               >
                 Chiqish
@@ -192,13 +195,63 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="btn-primary text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 font-bold"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>Kirish / Ro'yxatdan O'tish</span>
+              <span>Kirish</span>
             </button>
           )}
 
         </div>
 
       </div>
+
+      {/* Mobile Drawer Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden pt-4 pb-2 border-t border-white/10 mt-3 space-y-2 text-xs font-bold animate-slide-in">
+          <button
+            onClick={() => {
+              setActiveTab('catalog');
+              setMobileMenuOpen(false);
+            }}
+            className="w-full text-left px-3 py-2 rounded-xl bg-white/5 text-white flex items-center gap-2"
+          >
+            <Home className="w-4 h-4 text-blue-400" />
+            <span>Katalog & Bosh Sahifa</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('orders');
+              setMobileMenuOpen(false);
+            }}
+            className="w-full text-left px-3 py-2 rounded-xl bg-white/5 text-white flex items-center gap-2"
+          >
+            <Lock className="w-4 h-4 text-amber-400" />
+            <span>Buyurtmalarim</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('profile');
+              setMobileMenuOpen(false);
+            }}
+            className="w-full text-left px-3 py-2 rounded-xl bg-white/5 text-white flex items-center gap-2"
+          >
+            <User className="w-4 h-4 text-emerald-400" />
+            <span>Mening Profilim</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('admin_panel');
+              setMobileMenuOpen(false);
+            }}
+            className="w-full text-left px-3 py-2 rounded-xl bg-white/5 text-white flex items-center gap-2"
+          >
+            <ShieldCheck className="w-4 h-4 text-indigo-400" />
+            <span>Admin Desk</span>
+          </button>
+        </div>
+      )}
     </header>
   );
 };
+
