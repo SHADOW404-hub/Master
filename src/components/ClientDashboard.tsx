@@ -27,15 +27,19 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
   const [rating, setRating] = useState<number>(5);
   const [comment, setComment] = useState<string>('');
 
-  // Filter orders based on user role and identity
+  // Foydalanuvchi roliga qarab buyurtmalarni filterlash (xavfsizlik)
   const userOrders = orders.filter(o => {
-    if (!currentUser) return true;
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true; // Admin hammani ko'radi
     if (currentUser.role === 'master') {
-      // Show orders assigned to this master or overall for demo
-      return o.master_name.toLowerCase().includes(currentUser.name.toLowerCase()) || true;
+      // Ustaga tegishli buyurtmalar
+      return o.master_name.toLowerCase().includes(currentUser.name.toLowerCase());
     }
-    // For clients, match name/email or show all active client orders
-    return true;
+    // Mijozga tegishli buyurtmalar — email yoki ism bo'yicha
+    return (
+      o.client_name.toLowerCase().includes(currentUser.name.toLowerCase()) ||
+      (currentUser.email && o.client_id === currentUser.email)
+    );
   });
 
   const handleDisputeSubmit = (e: React.FormEvent) => {
@@ -246,9 +250,12 @@ export const ClientDashboard: React.FC<ClientDashboardProps> = ({
                 >
                   Bekor qilish
                 </button>
-                <button type="submit" className="btn-warning text-xs bg-red-600 hover:bg-red-700 font-bold">
-                  E'tiroz Yuborish
-                </button>
+                 <button
+                  type="submit"
+                  className="text-xs font-bold py-2 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white border-none cursor-pointer font-sans transition-all"
+                 >
+                   E'tiroz Yuborish
+                 </button>
               </div>
             </form>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from './services/store';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './components/LandingPage';
@@ -18,7 +18,7 @@ import type { Master, UserRole } from './types';
 import { Shield, Lock, Wrench } from 'lucide-react';
 import { supabase, onAuthStateChange, authSignOut } from './services/supabase';
 
-// All possible page views
+// ─── Page View types ────────────────────────────────────────────────────────
 type PageView =
   | 'landing'
   | 'login'
@@ -29,51 +29,64 @@ type PageView =
   | 'profile'
   | 'admin_panel';
 
-// Foydalanuvchi tizimga kirganda saqlanadigan ma'lumotlar
-interface CurrentUser {
+// ─── Foydalanuvchi ma'lumotlari ─────────────────────────────────────────────
+export interface CurrentUser {
+  id?: string;
   name: string;
   email: string;
   phone: string;
   role: UserRole;
+  region_id?: string;
+  district_id?: string;
 }
 
 const STORAGE_KEY = 'usta_mijoz_current_user';
+const AUTH_PAGES: PageView[] = ['landing', 'login', 'register', 'forgot'];
 
-function getInitialPage(hasUser: boolean): PageView {
-  // Agar foydalanuvchi login qilgan bo'lsa — katalogga, aks holda landing
-  return hasUser ? 'catalog' : 'landing';
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getSavedUser(): CurrentUser | null {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? (JSON.parse(saved) as CurrentUser) : null;
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
+
+function saveUser(user: CurrentUser) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+}
+
+function clearUser() {
+  localStorage.removeItem(STORAGE_KEY);
 }
 
 export function App() {
   const store = useAppStore();
 
   // ── Auth State ──────────────────────────────────────────────────────
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? (JSON.parse(saved) as CurrentUser) : null;
-    } catch {
-      localStorage.removeItem(STORAGE_KEY);
-      return null;
-    }
-  });
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(getSavedUser);
 
   // ── Page Routing ────────────────────────────────────────────────────
   const [activePage, setActivePage] = useState<PageView>(() =>
-    getInitialPage(Boolean(localStorage.getItem(STORAGE_KEY)))
+    getSavedUser() ? 'catalog' : 'landing'
   );
 
   // ── Toast ───────────────────────────────────────────────────────────
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const addToast = (type: 'success' | 'escrow' | 'warning' | 'info', title: string, message: string) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    setToasts(prev => [...prev, { id, type, title, message }]);
-  };
+  const addToast = useCallback(
+    (type: 'success' | 'escrow' | 'warning' | 'info', title: string, message: string) => {
+      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      setToasts((prev) => [...prev, { id, type, title, message }]);
+    },
+    []
+  );
 
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  };
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   // ── Modal states ────────────────────────────────────────────────────
   const [selectedMasterForDetail, setSelectedMasterForDetail] = useState<Master | null>(null);
@@ -87,116 +100,153 @@ export function App() {
   useEffect(() => {
     const { data: { subscription } } = onAuthStateChange(async (authUser) => {
       if (!authUser) {
-        // Session tugagan — foydalanuvchini tozalash
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (!saved) {
-          setCurrentUser(null);
-          setActivePage('landing');
-        }
-      } else {
-        // Session bor — profilni yangilash
-        try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', authUser.id)
-            .single();
+        // Session tugadi — localStorage'ni ham tozala
+        clearUser();
+        setCurrentUser(null);
+        setActivePage('landing');
+        return;
+      }
 
-          if (profile) {
-            const user: CurrentUser = {
-              name: profile.name,
-              email: profile.email,
-              phone: profile.phone || '',
-              role: profile.role as UserRole,
-            };
-            setCurrentUser(user);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-            store.setActiveRole(profile.role as UserRole);
-            if (profile.region_id) store.setSelectedRegionId(profile.region_id);
-            if (profile.district_id) store.setSelectedDistrictId(profile.district_id);
-          }
-        } catch {
-          // Profil topilmasa — davom etaversin
+      // Session bor — Supabase profiles jadvalidan haqiqiy ma'lumot ol
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('id, name, email, phone, role, region_id, district_id')
+          .eq('id', authUser.id)
+          .single();
+
+        if (profile && !error) {
+          const user: CurrentUser = {
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            phone: profile.phone || '',
+            role: profile.role as UserRole,
+            region_id: profile.region_id || '',
+            district_id: profile.district_id || '',
+          };
+          setCurrentUser(user);
+          saveUser(user);
+          store.setActiveRole(profile.role as UserRole);
+          if (profile.region_id) store.setSelectedRegionId(profile.region_id);
+          if (profile.district_id) store.setSelectedDistrictId(profile.district_id);
         }
+      } catch {
+        // Supabase ulanmagan bo'lsa — localStorage'dagi ma'lumotni ishlatib davom et
       }
     });
 
     return () => subscription.unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Derived values ──────────────────────────────────────────────────
-  const selectedRegion = store.regions.find(r => r.id === store.selectedRegionId);
-  const escrowOrdersCount = store.orders.filter(o => o.status === 'escrow_locked').length;
-  const currentMaster = store.allMasters[0];
+  const selectedRegion = store.regions.find((r) => r.id === store.selectedRegionId);
+  const escrowOrdersCount = store.orders.filter((o) => o.status === 'escrow_locked').length;
+
+  // Joriy foydalanuvchiga tegishli master profilini top (agar usta bo'lsa)
+  const currentMaster =
+    currentUser?.role === 'master'
+      ? store.allMasters.find(
+          (m) =>
+            m.name.toLowerCase() === currentUser.name.toLowerCase() ||
+            m.user_id === currentUser.id
+        ) || store.allMasters[0]
+      : store.allMasters[0];
+
   const masterWallet = store.getMasterWallet(currentMaster?.id || 'master-1');
   const financialStats = store.getFinancialStats();
 
   // ── Handlers ────────────────────────────────────────────────────────
 
   /** Muvaffaqiyatli login/register dan keyin chaqiriladi */
-  const handleLoginSuccess = (userData: {
-    name: string;
-    email: string;
-    phone: string;
-    role: UserRole;
-    region_id: string;
-    district_id: string;
-    category_id?: string;
-  }) => {
-    const user: CurrentUser = {
-      name: userData.name,
-      email: userData.email,
-      phone: userData.phone,
-      role: userData.role,
-    };
-    setCurrentUser(user);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    store.setActiveRole(userData.role);
-    store.setSelectedRegionId(userData.region_id);
-    store.setSelectedDistrictId(userData.district_id);
-    setActivePage('catalog');
-    addToast('success', 'Xush Kelibsiz!', `${userData.name}, platformadan xavfsiz foydalanishingiz mumkin.`);
-  };
+  const handleLoginSuccess = useCallback(
+    (userData: {
+      id?: string;
+      name: string;
+      email: string;
+      phone: string;
+      role: UserRole;
+      region_id: string;
+      district_id: string;
+      category_id?: string;
+    }) => {
+      const user: CurrentUser = {
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        role: userData.role,
+        region_id: userData.region_id,
+        district_id: userData.district_id,
+      };
+      setCurrentUser(user);
+      saveUser(user);
+      store.setActiveRole(userData.role);
+      if (userData.region_id) store.setSelectedRegionId(userData.region_id);
+      if (userData.district_id) store.setSelectedDistrictId(userData.district_id);
+      setActivePage('catalog');
+      addToast(
+        'success',
+        'Xush Kelibsiz!',
+        `${userData.name}, platformadan xavfsiz foydalanishingiz mumkin.`
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [addToast]
+  );
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await authSignOut();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore network errors */
+    }
+    clearUser();
     setCurrentUser(null);
-    localStorage.removeItem(STORAGE_KEY);
     setActivePage('landing');
     addToast('info', 'Tizimdan Chiqildi', 'Xavfsiz ravishda chiqdingiz.');
-  };
+  }, [addToast]);
 
-  const handleInitiateEscrow = (master: Master, serviceTitle: string, price: number) => {
-    if (!currentUser) {
-      setActivePage('login');
-      addToast('info', 'Tizimga Kirish Shart', 'Buyurtma berish uchun iltimos kiring yoki ro\'yxatdan o\'ting.');
-      return;
-    }
-    setSelectedMasterForDetail(null);
-    setEscrowCheckoutData({ master, serviceTitle, price });
-  };
+  const handleInitiateEscrow = useCallback(
+    (master: Master, serviceTitle: string, price: number) => {
+      if (!currentUser) {
+        setActivePage('login');
+        addToast(
+          'info',
+          'Tizimga Kirish Shart',
+          "Buyurtma berish uchun iltimos kiring yoki ro'yxatdan o'ting."
+        );
+        return;
+      }
+      setSelectedMasterForDetail(null);
+      setEscrowCheckoutData({ master, serviceTitle, price });
+    },
+    [currentUser, addToast]
+  );
 
-  const handleEscrowSuccess = (paymentSystem: 'payme' | 'click') => {
-    if (escrowCheckoutData) {
-      store.createEscrowOrder(
-        escrowCheckoutData.master,
-        escrowCheckoutData.serviceTitle,
-        escrowCheckoutData.price,
-        paymentSystem,
-        currentUser
-      );
-      addToast(
-        'escrow',
-        'Escrow To\'lovi Muzlatildi!',
-        `${escrowCheckoutData.price.toLocaleString()} so'm pul platformada xavfsiz muzlatildi.`
-      );
-      setEscrowCheckoutData(null);
-      setActivePage('orders');
-    }
-  };
+  const handleEscrowSuccess = useCallback(
+    (paymentSystem: 'payme' | 'click') => {
+      if (escrowCheckoutData) {
+        store.createEscrowOrder(
+          escrowCheckoutData.master,
+          escrowCheckoutData.serviceTitle,
+          escrowCheckoutData.price,
+          paymentSystem,
+          currentUser
+        );
+        addToast(
+          'escrow',
+          "Escrow To'lovi Muzlatildi!",
+          `${escrowCheckoutData.price.toLocaleString()} so'm pul platformada xavfsiz muzlatildi.`
+        );
+        setEscrowCheckoutData(null);
+        setActivePage('orders');
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [escrowCheckoutData, currentUser, addToast]
+  );
 
   // ── Auth pages (no Navbar) ───────────────────────────────────────────
 
@@ -259,14 +309,22 @@ export function App() {
   }
 
   // ── Main app (with Navbar) ──────────────────────────────────────────
-  // Agar foydalanuvchi login qilmagan holda auth page bo'lmagan joyga kelsa,
-  // landingga redirect qilamiz
-  if (!currentUser && !['landing', 'login', 'register', 'forgot'].includes(activePage)) {
-    setActivePage('landing');
-    return null;
+  // Login qilmagan foydalanuvchi auth bo'lmagan sahifaga kirsa — landingga
+  if (!currentUser && !AUTH_PAGES.includes(activePage)) {
+    // State yangilanishini navbatga qo'yish uchun setTimeout ishlatilmaydi,
+    // to'g'ridan-to'g'ri render qilamiz
+    return (
+      <>
+        <LandingPage
+          onGoLogin={() => setActivePage('login')}
+          onGoRegister={() => setActivePage('register')}
+          onBrowseGuest={() => setActivePage('catalog')}
+        />
+      </>
+    );
   }
 
-  // Navbar uchun activeTab — auth pagela catalog ga mapping
+  // Navbar uchun activeTab
   const navTab = (['catalog', 'orders', 'profile', 'admin_panel'] as const).includes(
     activePage as 'catalog' | 'orders' | 'profile' | 'admin_panel'
   )
@@ -275,7 +333,6 @@ export function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#070A12] text-gray-100 font-sans selection:bg-blue-600 selection:text-white">
-
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
       {/* Navbar */}
@@ -296,8 +353,8 @@ export function App() {
         onLogout={handleLogout}
       />
 
-      {/* Main content router container */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main content */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6">
 
         {/* VIEW: CATALOG */}
         {activePage === 'catalog' && (
@@ -311,11 +368,13 @@ export function App() {
               selectedRegion={selectedRegion}
               totalMastersFound={store.masters.length}
             />
-            <section className="max-w-7xl mx-auto px-4 pb-16">
+            <section className="max-w-7xl mx-auto pb-16">
               {store.masters.length === 0 ? (
                 <div className="glass-panel p-12 text-center text-gray-400 max-w-md mx-auto space-y-3 my-8">
                   <Wrench className="w-12 h-12 text-gray-500 mx-auto" />
-                  <h3 className="text-lg font-bold text-white">Tanlangan hudud bo'yicha usta topilmadi</h3>
+                  <h3 className="text-lg font-bold text-white">
+                    Tanlangan hudud bo'yicha usta topilmadi
+                  </h3>
                   <p className="text-xs text-gray-400">
                     Iltimos, viloyat yoki tumanni almashtiring yoki qidiruv so'rovini tozalang.
                   </p>
@@ -332,7 +391,7 @@ export function App() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-2">
                   {store.masters.map((master) => (
                     <MasterCard
                       key={master.id}
@@ -355,15 +414,27 @@ export function App() {
             orders={store.orders}
             onApproveEscrow={(id) => {
               store.approveAndReleaseEscrow(id);
-              addToast('success', 'Ish Qabul Qilindi!', '98% pul ustaga o\'tkazildi, 2% platforma komissiyasi olindi.');
+              addToast(
+                'success',
+                'Ish Qabul Qilindi!',
+                "98% pul ustaga o'tkazildi, 2% platforma komissiyasi olindi."
+              );
             }}
             onRaiseDispute={(id, reason) => {
               store.raiseDispute(id, reason);
-              addToast('warning', 'Nizo Ochildi!', 'Order muzlatildi va Admin Desk ko\'rib chiqishga olindi.');
+              addToast(
+                'warning',
+                'Nizo Ochildi!',
+                "Order muzlatildi va Admin Desk ko'rib chiqishga olindi."
+              );
             }}
             onAddReview={(ordId, mId, rat, comm) => {
               store.addReview(ordId, mId, rat, comm, currentUser);
-              addToast('info', 'Sharh Chop Etildi', 'Ustaga yulduzli bahongiz muvaffaqiyatli saqlandi.');
+              addToast(
+                'info',
+                'Sharh Chop Etildi',
+                'Ustaga yulduzli bahongiz muvaffaqiyatli saqlandi.'
+              );
             }}
           />
         )}
@@ -378,7 +449,7 @@ export function App() {
             allDistricts={store.allDistricts}
             onToggleStatus={(mId) => {
               store.toggleMasterStatus(mId);
-              addToast('info', 'Status O\'zgardi', 'Profil ish statusi muvaffaqiyatli yangilandi.');
+              addToast('info', "Status O'zgardi", 'Profil ish statusi muvaffaqiyatli yangilandi.');
             }}
             onUpdateMasterProfile={(mId, updates) => {
               store.updateMasterProfile(mId, updates);
@@ -386,11 +457,19 @@ export function App() {
             }}
             onSubmitKYC={(mId, pass, photo) => {
               store.submitMasterKYC(mId, pass, photo);
-              addToast('info', 'KYC Yuborildi', 'Pasport ma\'lumotlaringiz moderatorlarga tekshiruvga yuborildi.');
+              addToast(
+                'info',
+                'KYC Yuborildi',
+                "Pasport ma'lumotlaringiz moderatorlarga tekshiruvga yuborildi."
+              );
             }}
             onWithdrawMoney={(mId, amount, card) => {
               store.withdrawMasterBalance(mId, amount, card);
-              addToast('success', 'Pul Yechildi', `${amount.toLocaleString()} so'm ${card} kartasiga o'tkazildi.`);
+              addToast(
+                'success',
+                'Pul Yechildi',
+                `${amount.toLocaleString()} so'm ${card} kartasiga o'tkazildi.`
+              );
             }}
             onOpenAuth={() => setActivePage('login')}
             onLogout={handleLogout}
@@ -398,7 +477,7 @@ export function App() {
         )}
 
         {/* VIEW: ADMIN */}
-        {activePage === 'admin_panel' && (
+        {activePage === 'admin_panel' && currentUser?.role === 'admin' && (
           <AdminPanel
             masters={store.allMasters}
             orders={store.orders}
@@ -417,12 +496,28 @@ export function App() {
               addToast(
                 'success',
                 'Nizo Hal Qilindi',
-                `Admin ${adminName}: ${decision === 'refund_client' ? 'Pul mijozga qaytarildi' : 'Pul ustaga o\'tkazildi'}`
+                `Admin ${adminName}: ${decision === 'refund_client' ? 'Pul mijozga qaytarildi' : "Pul ustaga o'tkazildi"}`
               );
             }}
           />
         )}
 
+        {/* Admin sahifasiga ruxsatsiz kirish */}
+        {activePage === 'admin_panel' && currentUser?.role !== 'admin' && (
+          <div className="glass-panel p-12 text-center max-w-md mx-auto mt-8 space-y-4">
+            <Shield className="w-12 h-12 text-red-400 mx-auto" />
+            <h3 className="text-lg font-bold text-white">Kirish Taqiqlangan</h3>
+            <p className="text-xs text-gray-400">
+              Admin paneliga faqat tizim administratorlari kirishi mumkin.
+            </p>
+            <button
+              onClick={() => setActivePage('catalog')}
+              className="btn-primary text-xs py-2 px-4 rounded-xl"
+            >
+              Katalogga Qaytish
+            </button>
+          </div>
+        )}
       </main>
 
       {/* MODALS */}
@@ -448,8 +543,8 @@ export function App() {
       )}
 
       {/* FOOTER */}
-      <footer className="glass-panel border-t border-white/10 py-6 px-6 text-xs text-gray-400 mt-auto">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <footer className="glass-panel border-t border-white/10 py-6 px-4 sm:px-6 text-xs text-gray-400 mt-auto">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 font-extrabold text-white text-sm">
               <Wrench className="w-4 h-4 text-blue-400" />
@@ -458,26 +553,24 @@ export function App() {
                 2% ESCROW PROTOCOL
               </span>
             </div>
-            <p className="text-gray-400 mt-1">
+            <p className="text-gray-500 mt-1 text-[11px]">
               O'zbekistonning barcha 14 hududi bo'yicha ishonchli ustalar va mijozlar platformasi.
             </p>
           </div>
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-1.5 text-gray-300 font-semibold">
+            <div className="flex items-center gap-1.5 text-gray-400 font-semibold">
               <Shield className="w-4 h-4 text-emerald-400" />
               <span>Pasport KYC Moderatsiyasi</span>
             </div>
-            <div className="flex items-center gap-1.5 text-gray-300 font-semibold">
+            <div className="flex items-center gap-1.5 text-gray-400 font-semibold">
               <Lock className="w-4 h-4 text-amber-400" />
-              <span>Payme / Click API Escrow</span>
+              <span>Payme / Click Escrow</span>
             </div>
           </div>
         </div>
       </footer>
-
     </div>
   );
 }
 
 export default App;
-

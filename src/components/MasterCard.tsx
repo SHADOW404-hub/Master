@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Master, Region, District } from '../types';
-import { Star, ShieldCheck, MapPin, Phone, Clock, ChevronRight } from 'lucide-react';
+import { Star, ShieldCheck, MapPin, Phone, Clock, ChevronRight, Briefcase } from 'lucide-react';
 
 interface MasterCardProps {
   master: Master;
@@ -15,89 +15,194 @@ export const MasterCard: React.FC<MasterCardProps> = ({
   allDistricts,
   onOpenDetail,
 }) => {
-  const regionName = regions.find(r => r.id === master.region_id)?.name_uz || master.region_id;
+  const regionName = regions.find(r => r.id === master.region_id)?.name_uz || '';
   const districtName = allDistricts.find(d => d.id === master.district_id)?.name_uz || '';
+  const locationLabel = [districtName, regionName].filter(Boolean).join(', ');
+
+  const isVerified = master.passport_kyc.status === 'verified';
+  const isAvailable = master.status === 'available';
+
+  // Avatar fallback
+  const avatarSrc = master.avatar && master.avatar.startsWith('http')
+    ? master.avatar
+    : `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(master.name)}&backgroundColor=1D4ED8`;
 
   return (
-    <div className="glass-card p-5 flex flex-col justify-between relative group border border-white/10 hover:border-blue-500/50 shadow-xl">
-      
-      {/* Top Profile Header */}
-      <div>
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="relative shrink-0">
-              <img
-                src={master.avatar}
-                alt={master.name}
-                className="w-14 h-14 rounded-2xl object-cover border-2 border-blue-500/40 group-hover:border-blue-500 transition-all shadow-md"
-              />
-              {master.passport_kyc.status === 'verified' && (
-                <div 
-                  className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-1 shadow-md"
-                  title="Pasport KYC Tasdiqlangan Usta"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                </div>
-              )}
-            </div>
+    <article
+      className="glass-card flex flex-col justify-between relative group"
+      style={{
+        border: isVerified
+          ? '1px solid rgba(16,185,129,0.2)'
+          : '1px solid rgba(255,255,255,0.08)',
+        padding: '1.25rem',
+        borderRadius: 22,
+        transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)',
+      }}
+    >
+      {/* KYC badge — top right */}
+      {isVerified && (
+        <div style={{
+          position: 'absolute', top: 14, right: 14,
+          display: 'flex', alignItems: 'center', gap: 4,
+          background: 'rgba(16,185,129,0.15)',
+          border: '1px solid rgba(16,185,129,0.35)',
+          borderRadius: 99, padding: '0.2rem 0.6rem',
+          fontSize: '0.65rem', fontWeight: 800, color: '#34D399',
+        }}>
+          <ShieldCheck style={{ width: 11, height: 11 }} />
+          KYC
+        </div>
+      )}
 
-            <div>
-              <h3 className="font-extrabold text-white text-base group-hover:text-blue-400 transition-colors">
-                {master.name}
-              </h3>
-              <p className="text-xs font-bold text-blue-400 mt-0.5">{master.category_name}</p>
-              
-              <div className="flex items-center gap-1 text-xs text-gray-400 mt-1 font-medium">
-                <MapPin className="w-3 h-3 text-red-400 shrink-0" />
-                <span>{regionName}{districtName ? `, ${districtName}` : ''}</span>
-              </div>
-            </div>
+      {/* ── Profile Header ── */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', marginBottom: '0.85rem' }}>
+          {/* Avatar */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <img
+              src={avatarSrc}
+              alt={master.name}
+              loading="lazy"
+              style={{
+                width: 58, height: 58,
+                borderRadius: 16,
+                objectFit: 'cover',
+                border: isVerified
+                  ? '2px solid rgba(16,185,129,0.5)'
+                  : '2px solid rgba(59,130,246,0.35)',
+                transition: 'border-color 0.3s',
+              }}
+              onError={e => {
+                (e.currentTarget as HTMLImageElement).src =
+                  `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(master.name)}&backgroundColor=1D4ED8`;
+              }}
+            />
+            {/* Online dot */}
+            {isAvailable && (
+              <div style={{
+                position: 'absolute', bottom: 2, right: 2,
+                width: 12, height: 12, borderRadius: '50%',
+                background: '#10B981',
+                border: '2px solid #0D1424',
+                animation: 'pulse-glow 2s ease-in-out infinite',
+              }} />
+            )}
           </div>
 
-          {/* Status Badge */}
-          <div className="shrink-0">
-            {master.status === 'available' ? (
-              <span className="badge-available">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Hozir bo'shman
-              </span>
-            ) : (
-              <span className="badge-busy">
-                <Clock className="w-3.5 h-3.5" /> Bandman
-              </span>
+          {/* Name & category */}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h3 style={{
+              fontWeight: 800, fontSize: '0.975rem', color: '#F1F5F9',
+              marginBottom: '0.2rem',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              transition: 'color 0.2s',
+            }}
+              className="group-hover:text-blue-400"
+            >
+              {master.name}
+            </h3>
+            <p style={{
+              fontSize: '0.72rem', fontWeight: 700, color: '#60A5FA',
+              marginBottom: '0.3rem',
+            }}>
+              {master.category_name}
+            </p>
+            {locationLabel && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', color: '#64748B' }}>
+                <MapPin style={{ width: 11, height: 11, color: '#F87171', flexShrink: 0 }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {locationLabel}
+                </span>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Rating & Orders Row */}
-        <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-black/40 border border-white/5 text-xs my-3">
-          <div className="flex items-center gap-1.5 font-bold">
-            <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-            <span className="text-white text-sm">{master.rating}</span>
-            <span className="text-gray-400 font-normal">({master.reviewsCount} sharh)</span>
+        {/* ── Stats Row ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'rgba(0,0,0,0.35)', borderRadius: 12,
+          padding: '0.55rem 0.85rem', marginBottom: '0.85rem',
+          border: '1px solid rgba(255,255,255,0.05)',
+        }}>
+          {/* Rating */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Star style={{ width: 15, height: 15, color: '#FBBF24', fill: '#FBBF24' }} />
+            <span style={{ fontWeight: 800, color: '#fff', fontSize: '0.9rem' }}>{master.rating}</span>
+            <span style={{ color: '#475569', fontSize: '0.7rem' }}>({master.reviewsCount})</span>
           </div>
-          <div className="h-3 w-px bg-white/10" />
-          <div className="text-gray-300 font-medium">
-            <span className="text-emerald-400 font-bold">{master.completedOrders}</span> buyurtma
+
+          <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
+
+          {/* Orders */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem' }}>
+            <Briefcase style={{ width: 12, height: 12, color: '#60A5FA' }} />
+            <span style={{ color: '#34D399', fontWeight: 800 }}>{master.completedOrders}</span>
+            <span style={{ color: '#475569' }}>buyurtma</span>
           </div>
+
+          <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
+
+          {/* Status */}
+          {isAvailable ? (
+            <span style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              fontSize: '0.68rem', fontWeight: 700, color: '#10B981',
+            }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981' }} />
+              Bo'sh
+            </span>
+          ) : (
+            <span style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              fontSize: '0.68rem', fontWeight: 700, color: '#F87171',
+            }}>
+              <Clock style={{ width: 11, height: 11 }} />
+              Band
+            </span>
+          )}
         </div>
 
-        {/* Bio summary */}
-        <p className="text-xs text-gray-300 line-clamp-2 mb-4 leading-relaxed font-normal">
+        {/* ── Bio ── */}
+        <p style={{
+          fontSize: '0.75rem', color: '#94A3B8', lineHeight: 1.65,
+          marginBottom: '0.85rem',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}>
           {master.bio}
         </p>
 
-        {/* Price list snippet chips */}
+        {/* ── Price list snippet ── */}
         {master.price_list.length > 0 && (
-          <div className="bg-white/5 rounded-xl p-3 mb-4 text-xs space-y-1.5 border border-white/5">
-            <div className="text-gray-400 font-bold text-[11px] uppercase tracking-wider mb-1">
-              Prays-list xizmatlari:
-            </div>
+          <div style={{
+            background: 'rgba(255,255,255,0.04)',
+            borderRadius: 12, padding: '0.65rem 0.85rem',
+            marginBottom: '0.85rem',
+            border: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            <p style={{
+              fontSize: '0.62rem', fontWeight: 700, color: '#475569',
+              textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.45rem',
+            }}>
+              Xizmatlar narxi:
+            </p>
             {master.price_list.slice(0, 2).map((item) => (
-              <div key={item.id} className="flex justify-between items-center text-gray-200">
-                <span className="truncate pr-2 font-medium">{item.name}</span>
-                <span className="font-extrabold text-emerald-400 shrink-0">
-                  {item.price.toLocaleString()} so'm
+              <div key={item.id} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                marginBottom: '0.3rem',
+              }}>
+                <span style={{
+                  fontSize: '0.72rem', color: '#CBD5E1', fontWeight: 500,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  paddingRight: 8, flex: 1,
+                }}>
+                  {item.name}
+                </span>
+                <span style={{
+                  fontSize: '0.75rem', fontWeight: 800, color: '#34D399', flexShrink: 0,
+                }}>
+                  {item.price.toLocaleString('uz-UZ')} so'm
                 </span>
               </div>
             ))}
@@ -105,26 +210,70 @@ export const MasterCard: React.FC<MasterCardProps> = ({
         )}
       </div>
 
-      {/* Action Buttons */}
-      <div className="pt-3 border-t border-white/10 flex items-center gap-2">
+      {/* ── Action Buttons ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        paddingTop: '0.85rem',
+        borderTop: '1px solid rgba(255,255,255,0.07)',
+      }}>
+        {/* Phone call */}
         <a
           href={`tel:${master.phone.replace(/\s+/g, '')}`}
-          className="btn-secondary py-2.5 px-3 text-xs rounded-xl hover:text-emerald-400 hover:border-emerald-500/40 shrink-0 font-bold"
-          title="Ustaga telefon qilish"
+          id={`master-call-${master.id}`}
+          aria-label={`${master.name}ga telefon qilish`}
+          title={`${master.name}ga qo'ng'iroq qilish`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '0.6rem 0.85rem',
+            background: 'rgba(16,185,129,0.1)',
+            border: '1px solid rgba(16,185,129,0.25)',
+            borderRadius: 12, color: '#34D399',
+            fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
+            textDecoration: 'none',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(16,185,129,0.2)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(16,185,129,0.5)';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(16,185,129,0.1)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(16,185,129,0.25)';
+          }}
         >
-          <Phone className="w-3.5 h-3.5 text-emerald-400" />
+          <Phone style={{ width: 13, height: 13 }} />
           <span>{master.phone}</span>
         </a>
 
+        {/* Detail / Order */}
         <button
+          id={`master-detail-${master.id}`}
           onClick={() => onOpenDetail(master)}
-          className="btn-primary py-2.5 px-3 text-xs rounded-xl flex-1 justify-center font-bold"
+          style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            padding: '0.65rem 1rem',
+            background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)',
+            border: 'none', borderRadius: 12,
+            color: '#fff', fontSize: '0.78rem', fontWeight: 800,
+            cursor: 'pointer', fontFamily: 'inherit',
+            boxShadow: '0 4px 14px rgba(37,99,235,0.35)',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+            (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 20px rgba(37,99,235,0.5)';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.transform = '';
+            (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(37,99,235,0.35)';
+          }}
         >
           <span>Profil & Buyurtma</span>
-          <ChevronRight className="w-3.5 h-3.5" />
+          <ChevronRight style={{ width: 14, height: 14 }} />
         </button>
       </div>
-
-    </div>
+    </article>
   );
 };
+
+export default MasterCard;
