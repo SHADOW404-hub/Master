@@ -18,10 +18,10 @@ const getSupabaseErrorMsg = (msg: string): string => {
   return 'Xatolik yuz berdi. Qayta urinib ko\'ring.';
 };
 
-export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onGoLogin, onGoLanding }) => {
-  const [email, setEmail]   = useState('');
+export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onGoLogin }) => {
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState('');
+  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
 
