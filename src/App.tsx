@@ -41,7 +41,7 @@ export interface CurrentUser {
 }
 
 const STORAGE_KEY = 'usta_mijoz_current_user';
-const AUTH_PAGES: PageView[] = ['landing', 'login', 'register', 'forgot'];
+const PUBLIC_PAGES: PageView[] = ['landing', 'login', 'register', 'forgot', 'catalog', 'profile'];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function getSavedUser(): CurrentUser | null {
@@ -309,19 +309,10 @@ export function App() {
   }
 
   // ── Main app (with Navbar) ──────────────────────────────────────────
-  // Login qilmagan foydalanuvchi auth bo'lmagan sahifaga kirsa — landingga
-  if (!currentUser && !AUTH_PAGES.includes(activePage)) {
-    // State yangilanishini navbatga qo'yish uchun setTimeout ishlatilmaydi,
-    // to'g'ridan-to'g'ri render qilamiz
-    return (
-      <>
-        <LandingPage
-          onGoLogin={() => setActivePage('login')}
-          onGoRegister={() => setActivePage('register')}
-          onBrowseGuest={() => setActivePage('catalog')}
-        />
-      </>
-    );
+  // Login qilmagan foydalanuvchi yopiq sahifaga ('orders', 'admin_panel') kirmasligi uchun
+  if (!currentUser && !PUBLIC_PAGES.includes(activePage)) {
+    setActivePage('login');
+    return null;
   }
 
   // Navbar uchun activeTab
