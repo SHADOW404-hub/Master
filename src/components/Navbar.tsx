@@ -71,9 +71,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         setMobileMenuOpen(false);
       },
     },
-    {
+    // Ish E'lonlari menyusi faqat mijozlar uchun (ustalarda bo'lmaydi)
+    ...(currentUser?.role !== 'master' ? [{
       id: 'jobs' as const,
-      label: currentUser?.role === 'master' ? 'Mijozlar Ishlari' : 'Ish E\'lonlari',
+      label: "Ish E'lonlari",
       icon: Briefcase,
       color: 'indigo',
       badge: openJobsCount && openJobsCount > 0 ? openJobsCount : undefined,
@@ -81,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         setActiveTab('jobs');
         setMobileMenuOpen(false);
       },
-    },
+    }] : []),
     {
       id: 'orders' as const,
       label: 'Buyurtmalar',

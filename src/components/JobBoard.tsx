@@ -86,20 +86,22 @@ export const JobBoard: React.FC<JobBoardProps> = ({
           </p>
         </div>
 
-        {/* Action Button */}
-        <button
-          onClick={() => {
-            if (!currentUser) {
-              onOpenAuth();
-              return;
-            }
-            setShowPostModal(true);
-          }}
-          className="btn-primary text-xs py-3 px-5 rounded-2xl font-extrabold flex items-center gap-2 shrink-0 shadow-lg shadow-blue-600/30"
-        >
-          <PlusCircle className="w-4.5 h-4.5" />
-          <span>Yangi Ish E'lon Qilish</span>
-        </button>
+        {/* Action Button: Faqat mijozlar uchun (ustalarda bo'lmaydi) */}
+        {currentUser?.role !== 'master' && (
+          <button
+            onClick={() => {
+              if (!currentUser) {
+                onOpenAuth();
+                return;
+              }
+              setShowPostModal(true);
+            }}
+            className="btn-primary text-xs py-3 px-5 rounded-2xl font-extrabold flex items-center gap-2 shrink-0 shadow-lg shadow-blue-600/30"
+          >
+            <PlusCircle className="w-4.5 h-4.5" />
+            <span>Yangi Ish E'lon Qilish</span>
+          </button>
+        )}
       </div>
 
       {/* Filter Bar */}

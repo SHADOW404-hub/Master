@@ -381,72 +381,110 @@ export function App() {
       {/* Main content */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6">
 
-        {/* VIEW: CATALOG */}
+        {/* VIEW: CATALOG (Ustalarga Mijozlar Ishlari stoli, Mijozlarga Ustalari katalogi ko'rinadi) */}
         {activePage === 'catalog' && (
-          <div>
-            <HeroSearch
+          currentUser?.role === 'master' ? (
+            <JobBoard
+              currentUser={currentUser}
+              currentMaster={currentMaster}
+              jobRequests={store.jobRequests}
               categories={store.categories}
-              selectedCategory={store.selectedCategory}
-              setSelectedCategory={store.setSelectedCategory}
-              searchQuery={store.searchQuery}
-              setSearchQuery={store.setSearchQuery}
-              selectedRegion={selectedRegion}
-              totalMastersFound={store.masters.length}
+              regions={store.regions}
+              allDistricts={store.allDistricts}
+              selectedRegionId={store.selectedRegionId}
+              onAcceptJob={(jobId, master, arrivalTime) => {
+                store.acceptJobRequest(jobId, master, arrivalTime);
+                addToast(
+                  'escrow',
+                  'Ish Qabul Qilindi!',
+                  `Mijozga xabar berildi va borish vaqti (${arrivalTime}) saqlandi. To'lov platformada muzlatildi.`
+                );
+              }}
+              onCreateJob={(jobData) => {
+                if (currentUser) {
+                  store.createJobRequest({
+                    ...jobData,
+                    clientUser: currentUser,
+                  });
+                  addToast(
+                    'success',
+                    'Ish E\'lon Qilindi!',
+                    'Ishingiz muvaffaqiyatli e\'longa joylandi. Ustalar borish vaqtini belgilab qabul qilishadi.'
+                  );
+                }
+              }}
+              onCancelJob={(jobId) => {
+                store.cancelJobRequest(jobId);
+                addToast('info', 'E\'lon O\'chirildi', 'Ish e\'loningiz muvaffaqiyatli o\'chirildi.');
+              }}
+              onOpenAuth={() => setActivePage('login')}
             />
-            <section className="max-w-7xl mx-auto pb-16">
-              {store.masters.length === 0 ? (
-                <div className="glass-panel p-10 text-center text-gray-400 max-w-md mx-auto space-y-4 my-8 border border-blue-500/20 rounded-3xl shadow-2xl">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto border border-blue-500/30">
-                    <Wrench className="w-8 h-8" />
+          ) : (
+            <div>
+              <HeroSearch
+                categories={store.categories}
+                selectedCategory={store.selectedCategory}
+                setSelectedCategory={store.setSelectedCategory}
+                searchQuery={store.searchQuery}
+                setSearchQuery={store.setSearchQuery}
+                selectedRegion={selectedRegion}
+                totalMastersFound={store.masters.length}
+              />
+              <section className="max-w-7xl mx-auto pb-16">
+                {store.masters.length === 0 ? (
+                  <div className="glass-panel p-10 text-center text-gray-400 max-w-md mx-auto space-y-4 my-8 border border-blue-500/20 rounded-3xl shadow-2xl">
+                    <div className="w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto border border-blue-500/30">
+                      <Wrench className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-extrabold text-white">
+                      {store.allMasters.length === 0
+                        ? "Hozircha ro'yxatdan o'tgan ustalar mavjud emas"
+                        : "Tanlangan filtr bo'yicha usta topilmadi"}
+                    </h3>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      {store.allMasters.length === 0
+                        ? "Platformaga birinchi usta bo'lib ro'yxatdan o'ting va o'z xizmatlaringizni taklif qiling!"
+                        : "Iltimos, viloyat yoki tumanni almashtiring yoki qidiruv so'rovini tozalang."}
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
+                      {store.allMasters.length === 0 ? (
+                        <button
+                          onClick={() => setActivePage('register')}
+                          className="btn-primary text-xs py-2.5 px-6 rounded-xl font-bold"
+                        >
+                          Usta Bo'lib Ro'yxatdan O'tish
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            store.setSelectedRegionId('');
+                            store.setSelectedDistrictId('');
+                            store.setSelectedCategory('');
+                            store.setSearchQuery('');
+                          }}
+                          className="btn-primary text-xs py-2.5 px-6 rounded-xl font-bold"
+                        >
+                          Filtrlarni Tozalash
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <h3 className="text-xl font-extrabold text-white">
-                    {store.allMasters.length === 0
-                      ? "Hozircha ro'yxatdan o'tgan ustalar mavjud emas"
-                      : "Tanlangan filtr bo'yicha usta topilmadi"}
-                  </h3>
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    {store.allMasters.length === 0
-                      ? "Platformaga birinchi usta bo'lib ro'yxatdan o'ting va o'z xizmatlaringizni taklif qiling!"
-                      : "Iltimos, viloyat yoki tumanni almashtiring yoki qidiruv so'rovini tozalang."}
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
-                    {store.allMasters.length === 0 ? (
-                      <button
-                        onClick={() => setActivePage('register')}
-                        className="btn-primary text-xs py-2.5 px-6 rounded-xl font-bold"
-                      >
-                        Usta Bo'lib Ro'yxatdan O'tish
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          store.setSelectedRegionId('');
-                          store.setSelectedDistrictId('');
-                          store.setSelectedCategory('');
-                          store.setSearchQuery('');
-                        }}
-                        className="btn-primary text-xs py-2.5 px-6 rounded-xl font-bold"
-                      >
-                        Filtrlarni Tozalash
-                      </button>
-                    )}
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-2">
+                    {store.masters.map((master) => (
+                      <MasterCard
+                        key={master.id}
+                        master={master}
+                        regions={store.regions}
+                        allDistricts={store.allDistricts}
+                        onOpenDetail={(m) => setSelectedMasterForDetail(m)}
+                      />
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-2">
-                  {store.masters.map((master) => (
-                    <MasterCard
-                      key={master.id}
-                      master={master}
-                      regions={store.regions}
-                      allDistricts={store.allDistricts}
-                      onOpenDetail={(m) => setSelectedMasterForDetail(m)}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          </div>
+                )}
+              </section>
+            </div>
+          )
         )}
 
         {/* VIEW: JOB BOARD */}

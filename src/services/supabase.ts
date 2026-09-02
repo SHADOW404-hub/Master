@@ -149,3 +149,69 @@ export function onAuthStateChange(
     }
   });
 }
+
+/**
+ * Supabase `job_requests` jadvalidan ish e'lonlarini olish
+ */
+export async function fetchJobRequestsFromSupabase() {
+  try {
+    const { data, error } = await supabase
+      .from('job_requests')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Supabase `job_requests` jadvaliga yangi ish e'lonini saqlash
+ */
+export async function insertJobRequestToSupabase(jobData: Record<string, any>) {
+  try {
+    const { data, error } = await supabase
+      .from('job_requests')
+      .insert(jobData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn('Supabase job_requests saqlashda tarmoq xatosi:', err);
+    return null;
+  }
+}
+
+/**
+ * Supabase `job_requests` jadvalida usta ishni qabul qilganda yangilash
+ */
+export async function acceptJobRequestInSupabase(
+  jobId: string,
+  masterData: { master_id: string; master_name: string; master_phone: string; arrival_time: string }
+) {
+  try {
+    const { data, error } = await supabase
+      .from('job_requests')
+      .update({
+        status: 'accepted',
+        accepted_by_master_id: masterData.master_id,
+        accepted_by_master_name: masterData.master_name,
+        accepted_by_master_phone: masterData.master_phone,
+        arrival_time: masterData.arrival_time,
+        accepted_at: new Date().toISOString(),
+      })
+      .eq('id', jobId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn('Supabase job_requests accept update xatosi:', err);
+    return null;
+  }
+}
