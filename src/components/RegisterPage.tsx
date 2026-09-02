@@ -14,6 +14,16 @@ interface RegisterPageProps {
   categories: Category[];
   onGoLogin: () => void;
   onGoLanding: () => void;
+  onRegisterSuccess?: (userData: {
+    id?: string;
+    name: string;
+    email: string;
+    phone: string;
+    role: UserRole;
+    region_id: string;
+    district_id: string;
+    category_id?: string;
+  }) => void;
 }
 
 const getSupabaseErrorMsg = (msg: string): string => {
@@ -52,6 +62,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
   categories,
   onGoLogin,
   onGoLanding,
+  onRegisterSuccess,
 }) => {
   const [step, setStep]               = useState(0); // 0,1,2
   const [role, setRole]               = useState<UserRole>('client');
@@ -120,7 +131,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
 
     setLoading(true);
     try {
-      await authSignUp({
+      const signUpRes = await authSignUp({
         email: email.trim().toLowerCase(),
         password,
         name: name.trim(),
@@ -130,6 +141,21 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
         category_id: role === 'master' ? categoryId : undefined,
         phone: phone.replace(/\D/g, '').length >= 12 ? phone : undefined,
       });
+
+      const registeredUser = {
+        id: signUpRes?.user?.id || `usr-${Date.now()}`,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.replace(/\D/g, '').length >= 12 ? phone : '',
+        role,
+        region_id: regionId,
+        district_id: districtId,
+        category_id: role === 'master' ? categoryId : undefined,
+      };
+
+      if (onRegisterSuccess) {
+        onRegisterSuccess(registeredUser);
+      }
 
       setSuccess(email.trim().toLowerCase());
     } catch (err: unknown) {

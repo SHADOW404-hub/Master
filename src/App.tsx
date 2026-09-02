@@ -96,6 +96,14 @@ export function App() {
     price: number;
   } | null>(null);
 
+  // Restore and sync saved master profile on mount
+  useEffect(() => {
+    const saved = getSavedUser();
+    if (saved && saved.role === 'master') {
+      store.registerMasterInStore(saved);
+    }
+  }, []);
+
   // ── Supabase auth state listener ────────────────────────────────────
   useEffect(() => {
     const { data: { subscription } } = onAuthStateChange(async (authUser) => {
@@ -114,7 +122,7 @@ export function App() {
       try {
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('id, name, email, phone, role, region_id, district_id')
+          .select('id, name, email, phone, role, region_id, district_id, category_id')
           .eq('id', authUser.id)
           .single();
 
@@ -128,6 +136,18 @@ export function App() {
             region_id: profile.region_id || '',
             district_id: profile.district_id || '',
           };
+          if (profile.role === 'master') {
+            store.registerMasterInStore({
+              id: profile.id,
+              name: profile.name,
+              email: profile.email,
+              phone: profile.phone || '',
+              role: 'master',
+              region_id: profile.region_id || '',
+              district_id: profile.district_id || '',
+              category_id: profile.category_id || undefined,
+            });
+          }
           setCurrentUser(user);
           saveUser(user);
           store.setActiveRole(profile.role as UserRole);
@@ -183,6 +203,11 @@ export function App() {
         region_id: userData.region_id,
         district_id: userData.district_id,
       };
+
+      if (userData.role === 'master') {
+        store.registerMasterInStore(userData);
+      }
+
       setCurrentUser(user);
       saveUser(user);
       store.setActiveRole(userData.role);
@@ -293,6 +318,7 @@ export function App() {
           categories={store.categories}
           onGoLogin={() => setActivePage('login')}
           onGoLanding={() => setActivePage('landing')}
+          onRegisterSuccess={handleLoginSuccess}
         />
       </>
     );

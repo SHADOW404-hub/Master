@@ -7,6 +7,7 @@ import {
   REGIONS, DISTRICTS, CATEGORIES, SEED_MASTERS, 
   SEED_ORDERS, SEED_TRANSACTIONS, SEED_REVIEWS, SEED_AUDIT_LOGS 
 } from '../data/seedData';
+import { getAvatarSVG } from '../utils/avatar';
 
 const STORAGE_KEYS = {
   MASTERS: 'usta_mijoz_masters',
@@ -243,6 +244,66 @@ export function useAppStore() {
     }));
   };
 
+  // Register / Sync new master profile into masters catalog
+  const registerMasterInStore = (userData: {
+    id?: string;
+    name: string;
+    email: string;
+    phone?: string;
+    role: UserRole;
+    region_id?: string;
+    district_id?: string;
+    category_id?: string;
+  }) => {
+    if (userData.role !== 'master') return;
+
+    setMasters(prev => {
+      // Check if master already exists
+      const exists = prev.some(
+        m =>
+          (userData.id && m.user_id === userData.id) ||
+          m.name.toLowerCase().trim() === userData.name.toLowerCase().trim()
+      );
+
+      if (exists) return prev;
+
+      const catId = userData.category_id || CATEGORIES[0].id;
+      const categoryObj = CATEGORIES.find(c => c.id === catId) || CATEGORIES[0];
+      const regionId = userData.region_id || REGIONS[0].id;
+      const districtId = userData.district_id || '';
+
+      const newMaster: Master = {
+        id: `master-${userData.id || Date.now()}`,
+        user_id: userData.id || `usr-${Date.now()}`,
+        name: userData.name,
+        phone: userData.phone || '+998 90 123 45 67',
+        avatar: getAvatarSVG(userData.name),
+        category_id: catId,
+        category_name: categoryObj.name_uz,
+        region_id: regionId,
+        district_id: districtId,
+        bio: `${categoryObj.name_uz} bo'yicha professional usta mutaxassis. Xizmatlarni sifatli, kafolatli va o'z vaqtida bajaraman.`,
+        rating: 5.0,
+        reviewsCount: 0,
+        status: 'available',
+        passport_kyc: {
+          status: 'pending',
+          passportNumber: 'FA1234567',
+          submittedAt: new Date().toISOString().split('T')[0],
+        },
+        price_list: [
+          { id: `sp-1-${Date.now()}`, name: `${categoryObj.name_uz} xizmati (standart)`, price: 100000, unit: 'ish' },
+          { id: `sp-2-${Date.now()}`, name: `${categoryObj.name_uz} (murakkab montaj/ta'mir)`, price: 200000, unit: 'ish' },
+        ],
+        portfolio: [],
+        hourlyRate: 80000,
+        completedOrders: 0,
+      };
+
+      return [newMaster, ...prev];
+    });
+  };
+
   // 6. Master Status Toggle ("available" <-> "busy")
   const toggleMasterStatus = (masterId: string) => {
     setMasters(prev => prev.map(m => {
@@ -442,6 +503,7 @@ export function useAppStore() {
     audits,
     
     // Actions
+    registerMasterInStore,
     createEscrowOrder,
     approveAndReleaseEscrow,
     raiseDispute,
