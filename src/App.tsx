@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from './services/store';
 import { Navbar } from './components/Navbar';
-import { AuthLanding } from './components/AuthLanding';
+import { LandingPage } from './components/LandingPage';
+import { LoginPage } from './components/LoginPage';
+import { RegisterPage } from './components/RegisterPage';
+import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { ProfilePage } from './components/ProfilePage';
 import { HeroSearch } from './components/HeroSearch';
 import { MasterCard } from './components/MasterCard';
@@ -15,46 +18,105 @@ import type { Master, UserRole } from './types';
 import { Shield, Lock, Wrench } from 'lucide-react';
 import { supabase, onAuthStateChange } from './services/supabase';
 
+// All possible page views
+type PageView =
+  | 'landing'
+  | 'login'
+  | 'register'
+  | 'forgot'
+  | 'catalog'
+  | 'orders'
+  | 'profile'
+  | 'admin_panel';
+
+// Foydalanuvchi tizimga kirganda saqlanadigan ma'lumotlar
+interface CurrentUser {
+  name: string;
+  email: string;
+  phone: string;
+  role: UserRole;
+}
+
+const STORAGE_KEY = 'usta_mijoz_current_user';
+
+function getInitialPage(hasUser: boolean): PageView {
+  // Agar foydalanuvchi login qilgan bo'lsa — katalogga, aks holda landing
+  return hasUser ? 'catalog' : 'landing';
+}
+
 export function App() {
   const store = useAppStore();
 
-  const [currentUser, setCurrentUser] = useState<{
-    name: string;
-    email: string;
-    phone: string;
-    role: UserRole;
-  } | null>(() => {
-    const saved = localStorage.getItem('usta_mijoz_current_user');
-    return saved ? JSON.parse(saved) : null;
+  // ── Auth State ──────────────────────────────────────────────────────
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? (JSON.parse(saved) as CurrentUser) : null;
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
   });
 
-  // Supabase auth holati o'zgarganda user yangilanadi
+  // ── Page Routing ────────────────────────────────────────────────────
+  const [activePage, setActivePage] = useState<PageView>(() =>
+    getInitialPage(Boolean(localStorage.getItem(STORAGE_KEY)))
+  );
+
+  // ── Toast ───────────────────────────────────────────────────────────
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (type: 'success' | 'escrow' | 'warning' | 'info', title: string, message: string) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setToasts(prev => [...prev, { id, type, title, message }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  // ── Modal states ────────────────────────────────────────────────────
+  const [selectedMasterForDetail, setSelectedMasterForDetail] = useState<Master | null>(null);
+  const [escrowCheckoutData, setEscrowCheckoutData] = useState<{
+    master: Master;
+    serviceTitle: string;
+    price: number;
+  } | null>(null);
+
+  // ── Supabase auth state listener ────────────────────────────────────
   useEffect(() => {
     const { data: { subscription } } = onAuthStateChange(async (authUser) => {
       if (!authUser) {
-        // Session yo'q — local storage dan o'chiramiz
-        const saved = localStorage.getItem('usta_mijoz_current_user');
-        if (!saved) setCurrentUser(null);
+        // Session tugagan — foydalanuvchini tozalash
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) {
+          setCurrentUser(null);
+          setActivePage('landing');
+        }
       } else {
-        // Session bor — profil ma'lumotlarini olamiz
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
+        // Session bor — profilni yangilash
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', authUser.id)
+            .single();
 
-        if (profile) {
-          const user = {
-            name: profile.name,
-            email: profile.email,
-            phone: profile.phone || '',
-            role: profile.role as UserRole,
-          };
-          setCurrentUser(user);
-          localStorage.setItem('usta_mijoz_current_user', JSON.stringify(user));
-          store.setActiveRole(profile.role as UserRole);
-          if (profile.region_id) store.setSelectedRegionId(profile.region_id);
-          if (profile.district_id) store.setSelectedDistrictId(profile.district_id);
+          if (profile) {
+            const user: CurrentUser = {
+              name: profile.name,
+              email: profile.email,
+              phone: profile.phone || '',
+              role: profile.role as UserRole,
+            };
+            setCurrentUser(user);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+            store.setActiveRole(profile.role as UserRole);
+            if (profile.region_id) store.setSelectedRegionId(profile.region_id);
+            if (profile.district_id) store.setSelectedDistrictId(profile.district_id);
+          }
+        } catch {
+          // Profil topilmasa — davom etaversin
         }
       }
     });
@@ -63,43 +125,53 @@ export function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Active view tab state ('auth' | 'catalog' | 'orders' | 'profile' | 'admin_panel')
-  const [activeTab, setActiveTab] = useState<'auth' | 'catalog' | 'orders' | 'profile' | 'admin_panel'>(() => {
-    const savedUser = localStorage.getItem('usta_mijoz_current_user');
-    return savedUser ? 'catalog' : 'auth'; // Default to Auth Landing if not logged in
-  });
-
-  // Toasts State
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
-  const addToast = (type: 'success' | 'escrow' | 'warning' | 'info', title: string, message: string) => {
-    const id = `toast-${Date.now()}`;
-    setToasts(prev => [...prev, { id, type, title, message }]);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  };
-
-  const [selectedMasterForDetail, setSelectedMasterForDetail] = useState<Master | null>(null);
-  
-  // Escrow Checkout State
-  const [escrowCheckoutData, setEscrowCheckoutData] = useState<{
-    master: Master;
-    serviceTitle: string;
-    price: number;
-  } | null>(null);
-
+  // ── Derived values ──────────────────────────────────────────────────
   const selectedRegion = store.regions.find(r => r.id === store.selectedRegionId);
   const escrowOrdersCount = store.orders.filter(o => o.status === 'escrow_locked').length;
-
   const currentMaster = store.allMasters[0];
   const masterWallet = store.getMasterWallet(currentMaster?.id || 'master-1');
   const financialStats = store.getFinancialStats();
 
+  // ── Handlers ────────────────────────────────────────────────────────
+
+  /** Muvaffaqiyatli login/register dan keyin chaqiriladi */
+  const handleLoginSuccess = (userData: {
+    name: string;
+    email: string;
+    phone: string;
+    role: UserRole;
+    region_id: string;
+    district_id: string;
+    category_id?: string;
+  }) => {
+    const user: CurrentUser = {
+      name: userData.name,
+      email: userData.email,
+      phone: userData.phone,
+      role: userData.role,
+    };
+    setCurrentUser(user);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    store.setActiveRole(userData.role);
+    store.setSelectedRegionId(userData.region_id);
+    store.setSelectedDistrictId(userData.district_id);
+    setActivePage('catalog');
+    addToast('success', 'Xush Kelibsiz!', `${userData.name}, platformadan xavfsiz foydalanishingiz mumkin.`);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await import('./services/supabase').then(m => m.authSignOut());
+    } catch { /* ignore */ }
+    setCurrentUser(null);
+    localStorage.removeItem(STORAGE_KEY);
+    setActivePage('landing');
+    addToast('info', 'Tizimdan Chiqildi', 'Xavfsiz ravishda chiqdingiz.');
+  };
+
   const handleInitiateEscrow = (master: Master, serviceTitle: string, price: number) => {
     if (!currentUser) {
-      setActiveTab('auth');
+      setActivePage('login');
       addToast('info', 'Tizimga Kirish Shart', 'Buyurtma berish uchun iltimos kiring yoki ro\'yxatdan o\'ting.');
       return;
     }
@@ -116,69 +188,101 @@ export function App() {
         paymentSystem
       );
       addToast(
-        'escrow', 
-        'Escrow To\'lovi Muzlatildi!', 
+        'escrow',
+        'Escrow To\'lovi Muzlatildi!',
         `${escrowCheckoutData.price.toLocaleString()} so'm pul platformada xavfsiz muzlatildi.`
       );
       setEscrowCheckoutData(null);
-      setActiveTab('orders');
+      setActivePage('orders');
     }
   };
 
-  const handleLoginSuccess = (userData: {
-    name: string;
-    email: string;
-    phone: string;
-    role: UserRole;
-    region_id: string;
-    district_id: string;
-    category_id?: string;
-  }) => {
-    const user = { name: userData.name, email: userData.email, phone: userData.phone, role: userData.role };
-    setCurrentUser(user);
-    localStorage.setItem('usta_mijoz_current_user', JSON.stringify(user));
-    store.setActiveRole(userData.role);
-    store.setSelectedRegionId(userData.region_id);
-    store.setSelectedDistrictId(userData.district_id);
-    setActiveTab('catalog');
-    addToast('success', 'Xush Kelibsiz!', `${userData.name}, platformadan xavfsiz foydalanishingiz mumkin.`);
-  };
+  // ── Auth pages (no Navbar) ───────────────────────────────────────────
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('usta_mijoz_current_user');
-    setActiveTab('auth');
-    addToast('info', 'Tizimdan Chiqildi', 'Xavfsiz ravishda chiqdingiz.');
-  };
-
-  // If activeTab is 'auth', show full-screen Auth Landing page
-  if (activeTab === 'auth' && !currentUser) {
+  /** Landing — faqat login qilmagan foydalanuvchilar uchun */
+  if (activePage === 'landing' && !currentUser) {
     return (
-      <div className="min-h-screen bg-[#070A12] text-gray-100 font-sans">
+      <>
         <ToastContainer toasts={toasts} onDismiss={removeToast} />
-        <AuthLanding
-          regions={store.regions}
-          allDistricts={store.allDistricts}
-          categories={store.categories}
-          onLoginSuccess={handleLoginSuccess}
-          onBrowseGuest={() => setActiveTab('catalog')}
+        <LandingPage
+          onGoLogin={() => setActivePage('login')}
+          onGoRegister={() => setActivePage('register')}
+          onBrowseGuest={() => setActivePage('catalog')}
         />
-      </div>
+      </>
     );
   }
 
+  /** Kirish sahifasi */
+  if (activePage === 'login' && !currentUser) {
+    return (
+      <>
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
+        <LoginPage
+          onLoginSuccess={handleLoginSuccess}
+          onGoRegister={() => setActivePage('register')}
+          onGoLanding={() => setActivePage('landing')}
+          onForgotPassword={() => setActivePage('forgot')}
+        />
+      </>
+    );
+  }
+
+  /** Ro'yxatdan o'tish sahifasi */
+  if (activePage === 'register' && !currentUser) {
+    return (
+      <>
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
+        <RegisterPage
+          regions={store.regions}
+          allDistricts={store.allDistricts}
+          categories={store.categories}
+          onGoLogin={() => setActivePage('login')}
+          onGoLanding={() => setActivePage('landing')}
+        />
+      </>
+    );
+  }
+
+  /** Parolni tiklash sahifasi */
+  if (activePage === 'forgot' && !currentUser) {
+    return (
+      <>
+        <ToastContainer toasts={toasts} onDismiss={removeToast} />
+        <ForgotPasswordPage
+          onGoLogin={() => setActivePage('login')}
+          onGoLanding={() => setActivePage('landing')}
+        />
+      </>
+    );
+  }
+
+  // ── Main app (with Navbar) ──────────────────────────────────────────
+  // Agar foydalanuvchi login qilmagan holda auth page bo'lmagan joyga kelsa,
+  // landingga redirect qilamiz
+  if (!currentUser && !['landing', 'login', 'register', 'forgot'].includes(activePage)) {
+    setActivePage('landing');
+    return null;
+  }
+
+  // Navbar uchun activeTab — auth pagela catalog ga mapping
+  const navTab = (['catalog', 'orders', 'profile', 'admin_panel'] as const).includes(
+    activePage as 'catalog' | 'orders' | 'profile' | 'admin_panel'
+  )
+    ? (activePage as 'catalog' | 'orders' | 'profile' | 'admin_panel')
+    : 'catalog';
+
   return (
     <div className="min-h-screen flex flex-col bg-[#070A12] text-gray-100 font-sans selection:bg-blue-600 selection:text-white">
-      
-      {/* Toast Notification Container */}
+
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
-      {/* Top Floating Header Navbar */}
+      {/* Navbar */}
       <Navbar
         activeRole={store.activeRole}
         setActiveRole={store.setActiveRole}
-        activeTab={activeTab === 'auth' ? 'catalog' : activeTab}
-        setActiveTab={(tab) => setActiveTab(tab)}
+        activeTab={navTab}
+        setActiveTab={(tab) => setActivePage(tab)}
         regions={store.regions}
         districts={store.districts}
         selectedRegionId={store.selectedRegionId}
@@ -187,15 +291,15 @@ export function App() {
         setSelectedDistrictId={store.setSelectedDistrictId}
         escrowOrdersCount={escrowOrdersCount}
         currentUser={currentUser}
-        onOpenAuth={() => setActiveTab('auth')}
+        onOpenAuth={() => setActivePage('login')}
         onLogout={handleLogout}
       />
 
-      {/* MAIN VIEW ROUTER */}
+      {/* Main content */}
       <main className="flex-1">
-        
-        {/* VIEW 1: CATALOG & MARKETPLACE SEARCH */}
-        {activeTab === 'catalog' && (
+
+        {/* VIEW: CATALOG */}
+        {activePage === 'catalog' && (
           <div>
             <HeroSearch
               categories={store.categories}
@@ -206,7 +310,6 @@ export function App() {
               selectedRegion={selectedRegion}
               totalMastersFound={store.masters.length}
             />
-
             <section className="max-w-7xl mx-auto px-4 pb-16">
               {store.masters.length === 0 ? (
                 <div className="glass-panel p-12 text-center text-gray-400 max-w-md mx-auto space-y-3 my-8">
@@ -244,8 +347,8 @@ export function App() {
           </div>
         )}
 
-        {/* VIEW 2: MY ESCROW ORDERS */}
-        {activeTab === 'orders' && (
+        {/* VIEW: ORDERS */}
+        {activePage === 'orders' && (
           <ClientDashboard
             orders={store.orders}
             onApproveEscrow={(id) => {
@@ -263,8 +366,8 @@ export function App() {
           />
         )}
 
-        {/* VIEW 3: STANDALONE PROFILE PAGE */}
-        {activeTab === 'profile' && (
+        {/* VIEW: PROFILE */}
+        {activePage === 'profile' && (
           <ProfilePage
             currentUser={currentUser}
             master={currentMaster}
@@ -279,13 +382,13 @@ export function App() {
               store.submitMasterKYC(mId, pass, photo);
               addToast('info', 'KYC Yuborildi', 'Pasport ma\'lumotlaringiz moderatorlarga tekshiruvga yuborildi.');
             }}
-            onOpenAuth={() => setActiveTab('auth')}
+            onOpenAuth={() => setActivePage('login')}
             onLogout={handleLogout}
           />
         )}
 
-        {/* VIEW 4: DUAL ADMIN DESK */}
-        {activeTab === 'admin_panel' && (
+        {/* VIEW: ADMIN */}
+        {activePage === 'admin_panel' && (
           <AdminPanel
             masters={store.allMasters}
             orders={store.orders}
@@ -349,7 +452,6 @@ export function App() {
               O'zbekistonning barcha 14 hududi bo'yicha ishonchli ustalar va mijozlar platformasi.
             </p>
           </div>
-
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-1.5 text-gray-300 font-semibold">
               <Shield className="w-4 h-4 text-emerald-400" />
