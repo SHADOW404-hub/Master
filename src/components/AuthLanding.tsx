@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import type { UserRole, Region, District, Category } from '../types';
-import { Phone, User, Wrench, ArrowRight, CheckCircle2, Eye } from 'lucide-react';
+import { Wrench, User, ArrowRight, CheckCircle2, Eye, EyeOff, Shield, Lock, Star } from 'lucide-react';
 import { formatUzbekPhone, validateUzbekPhone } from '../utils/validation';
 
 interface AuthLandingProps {
@@ -25,268 +25,341 @@ export const AuthLanding: React.FC<AuthLandingProps> = ({
   onLoginSuccess,
   onBrowseGuest,
 }) => {
-  const [isLogin, setIsLogin] = useState<boolean>(false);
-  const [role, setRole] = useState<UserRole>('client');
-  const [name, setName] = useState<string>('');
-  const [phone, setPhone] = useState<string>('+998 ');
-  const [selectedRegionId, setSelectedRegionId] = useState<string>('reg-khorezm');
-  const [selectedDistrictId, setSelectedDistrictId] = useState<string>('dist-urganch');
-  const [categoryId, setCategoryId] = useState<string>('cat-santexnik');
-  const [otpStep, setOtpStep] = useState<boolean>(false);
-  const [otpCode, setOtpCode] = useState<string>('');
-  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [isLogin, setIsLogin]               = useState(false);
+  const [role, setRole]                     = useState<UserRole>('client');
+  const [name, setName]                     = useState('');
+  const [phone, setPhone]                   = useState('+998 ');
+  const [regionId, setRegionId]             = useState(regions[0]?.id ?? '');
+  const [districtId, setDistrictId]         = useState(allDistricts.find(d => d.region_id === regions[0]?.id)?.id ?? '');
+  const [categoryId, setCategoryId]         = useState(categories[0]?.id ?? '');
+  const [step, setStep]                     = useState<'form' | 'otp'>('form');
+  const [otp, setOtp]                       = useState(['', '', '', '']);
+  const [error, setError]                   = useState('');
+  const [loading, setLoading]               = useState(false);
+  const otpRefs                             = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
-  const districts = allDistricts.filter((d) => d.region_id === selectedRegionId);
+  const districts = allDistricts.filter(d => d.region_id === regionId);
 
-  const handleSendSMS = (e: React.FormEvent) => {
+  /* ── helpers ─────────────────────────────────────── */
+  const handleOtpChange = (idx: number, val: string) => {
+    const digit = val.replace(/\D/, '').slice(-1);
+    const next = [...otp];
+    next[idx] = digit;
+    setOtp(next);
+    if (digit && idx < 3) otpRefs[idx + 1].current?.focus();
+  };
+
+  const handleOtpKeyDown = (idx: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otp[idx] && idx > 0) {
+      otpRefs[idx - 1].current?.focus();
+    }
+  };
+
+  /* ── Step 1: send SMS ────────────────────────────── */
+  const handleSendOTP = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateUzbekPhone(phone)) {
-      setErrorMsg('Iltimos, to\'liq O\'zbekiston telefon raqamini kiriting (+998 XX XXX XX XX)');
+      setError("To'liq O'zbekiston telefon raqami kiriting (+998 XX XXX XX XX)");
       return;
     }
     if (!isLogin && !name.trim()) {
-      setErrorMsg('Iltimos, ism va familiyangizni kiriting');
+      setError('Ism va familiyangizni kiriting');
       return;
     }
-    setErrorMsg('');
-    setOtpStep(true);
+    setError('');
+    setLoading(true);
+    // Simulate SMS delay
+    setTimeout(() => {
+      setLoading(false);
+      setStep('otp');
+      setTimeout(() => otpRefs[0].current?.focus(), 100);
+    }, 800);
   };
 
-  const handleVerifyOTP = (e: React.FormEvent) => {
+  /* ── Step 2: verify OTP ──────────────────────────── */
+  const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
-    onLoginSuccess({
-      name: name || (role === 'master' ? 'Usta Mutaxassis' : 'Mijoz Foydalanuvchi'),
-      phone,
-      role,
-      region_id: selectedRegionId,
-      district_id: selectedDistrictId,
-      category_id: role === 'master' ? categoryId : undefined,
-    });
+    const code = otp.join('');
+    if (code.length < 4) {
+      setError('4 xonali kodni to\'liq kiriting');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      onLoginSuccess({
+        name: isLogin ? phone : name.trim(),
+        phone,
+        role,
+        region_id: regionId,
+        district_id: districtId,
+        category_id: role === 'master' ? categoryId : undefined,
+      });
+    }, 600);
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center px-4 py-8 relative bg-[#070A12]">
-      
-      {/* Background Ambient Glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-gradient-to-r from-blue-600/15 via-indigo-500/15 to-emerald-500/15 blur-[140px] pointer-events-none rounded-full" />
+    <div className="auth-screen">
 
-      <div className="max-w-md w-full glass-panel p-6 sm:p-8 border border-blue-500/30 relative z-10 shadow-2xl space-y-6">
-        
-        {/* Brand Header */}
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-emerald-400 p-0.5 shadow-lg shadow-blue-500/30 mx-auto">
-            <div className="w-full h-full bg-[#070A12] rounded-[14px] flex items-center justify-center">
-              <Wrench className="w-7 h-7 text-blue-400" />
-            </div>
+      {/* ─── Centered Auth Box ───────────────────────── */}
+      <div className="auth-box">
+
+        {/* Brand */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <div style={{
+            width: 56, height: 56,
+            background: 'linear-gradient(135deg, #3B82F6, #10B981)',
+            borderRadius: 16,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 1rem',
+            boxShadow: '0 8px 24px rgba(59,130,246,0.35)',
+          }}>
+            <Wrench style={{ width: 28, height: 28, color: '#fff' }} />
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            USTA<span className="text-blue-400">MIJOZ</span>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>
+            USTA<span style={{ color: '#3B82F6' }}>MIJOZ</span>
           </h1>
-          <p className="text-xs text-gray-300 font-medium">
-            {isLogin
-              ? 'Tizimga kirish uchun telefon raqamingizni kiriting'
-              : 'O\'zbekiston bo\'ylab xavfsiz Escrow xizmatlar platformasi'}
+          <p style={{ fontSize: '0.8125rem', color: '#64748B', marginTop: '0.35rem', fontWeight: 500 }}>
+            {step === 'otp'
+              ? `${phone} raqamiga SMS yuborildi`
+              : isLogin
+              ? 'Tizimga kirish'
+              : "O'zbekiston xizmatlari platformasi"}
           </p>
         </div>
 
-        {errorMsg && (
-          <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-xl text-xs text-red-300 font-semibold text-center">
-            {errorMsg}
+        {/* Trust pills */}
+        {step === 'form' && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {[
+              { icon: Shield, label: 'KYC Tasdiqlangan', color: '#10B981' },
+              { icon: Lock,   label: '2% Escrow Kafolati', color: '#F59E0B' },
+              { icon: Star,   label: '14 Viloyat', color: '#3B82F6' },
+            ].map(({ icon: Icon, label, color }) => (
+              <div key={label} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 99, padding: '4px 12px',
+                fontSize: '0.7rem', fontWeight: 700, color,
+              }}>
+                <Icon style={{ width: 11, height: 11 }} />
+                {label}
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Step 1: Login / Register Form */}
-        {!otpStep ? (
-          <form onSubmit={handleSendSMS} className="space-y-4 text-xs">
-            
-            {/* Toggle Mode */}
-            <div className="flex bg-black/50 p-1.5 rounded-2xl border border-white/10">
-              <button
-                type="button"
-                onClick={() => setIsLogin(false)}
-                className={`flex-1 py-2 rounded-xl font-extrabold transition-all ${
-                  !isLogin ? 'bg-blue-600 text-white shadow-md shadow-blue-600/40' : 'text-gray-400 hover:text-white'
-                }`}
-              >
+        {/* Error message */}
+        {error && (
+          <div style={{
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: 12, padding: '0.75rem 1rem',
+            fontSize: '0.8rem', color: '#FCA5A5', fontWeight: 600,
+            marginBottom: '1rem', textAlign: 'center',
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* ── STEP 1: FORM ─────────────────────────── */}
+        {step === 'form' && (
+          <form onSubmit={handleSendOTP}>
+
+            {/* Tab Toggle */}
+            <div className="auth-tab-group" style={{ marginBottom: '1.5rem' }}>
+              <button type="button" className={`auth-tab${!isLogin ? ' active' : ''}`} onClick={() => { setIsLogin(false); setError(''); }}>
                 Ro'yxatdan O'tish
               </button>
-              <button
-                type="button"
-                onClick={() => setIsLogin(true)}
-                className={`flex-1 py-2 rounded-xl font-extrabold transition-all ${
-                  isLogin ? 'bg-blue-600 text-white shadow-md shadow-blue-600/40' : 'text-gray-400 hover:text-white'
-                }`}
-              >
+              <button type="button" className={`auth-tab${isLogin ? ' active' : ''}`} onClick={() => { setIsLogin(true); setError(''); }}>
                 Kirish
               </button>
             </div>
 
-            {/* Role Switcher */}
+            {/* Role picker — only on register */}
             {!isLogin && (
-              <div>
-                <label className="text-gray-300 block mb-1.5 font-bold">Siz kimsiz?</label>
-                <div className="grid grid-cols-2 gap-3">
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">Siz kimsiz?</label>
+                <div style={{ display: 'flex', gap: 10 }}>
                   <button
                     type="button"
                     onClick={() => setRole('client')}
-                    className={`p-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all ${
-                      role === 'client'
-                        ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-md shadow-blue-500/20'
-                        : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
-                    }`}
+                    className={`role-btn${role === 'client' ? ' active-client' : ''}`}
                   >
-                    <User className="w-4 h-4 text-blue-400" />
+                    <User style={{ width: 20, height: 20 }} />
                     <span>Mijozman</span>
+                    <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>Usta topish</span>
                   </button>
-
                   <button
                     type="button"
                     onClick={() => setRole('master')}
-                    className={`p-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all ${
-                      role === 'master'
-                        ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/20'
-                        : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
-                    }`}
+                    className={`role-btn${role === 'master' ? ' active-master' : ''}`}
                   >
-                    <Wrench className="w-4 h-4 text-emerald-400" />
+                    <Wrench style={{ width: 20, height: 20 }} />
                     <span>Ustaman</span>
+                    <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>Buyurtma olish</span>
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Full Name */}
+            {/* Full name — register only */}
             {!isLogin && (
-              <div>
-                <label className="text-gray-300 block mb-1 font-bold">Ismingiz va Familiyangiz:</label>
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Ism va Familiya</label>
                 <input
+                  className="auth-input"
                   type="text"
-                  required
+                  placeholder="Jasurbek Rahimov"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Masalan: Jasurbek Rahimov"
-                  className="w-full bg-[#0F172A] border border-white/10 rounded-xl p-3 text-white outline-none focus:border-blue-500 font-medium"
+                  onChange={e => setName(e.target.value)}
+                  required={!isLogin}
+                  autoComplete="name"
                 />
               </div>
             )}
 
-            {/* Phone Input */}
-            <div>
-              <label className="text-gray-300 block mb-1 font-bold">Telefon Raqamingiz:</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(formatUzbekPhone(e.target.value))}
-                  placeholder="+998 90 123 45 67"
-                  className="w-full bg-[#0F172A] border border-white/10 rounded-xl p-3 text-white font-mono text-sm outline-none focus:border-blue-500"
-                />
-                <Phone className="w-4 h-4 text-gray-400 absolute right-3.5 top-3.5" />
-              </div>
+            {/* Phone */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label className="form-label">Telefon Raqam</label>
+              <input
+                className="auth-input"
+                type="tel"
+                placeholder="+998 90 123 45 67"
+                value={phone}
+                onChange={e => setPhone(formatUzbekPhone(e.target.value))}
+                required
+                autoComplete="tel"
+                style={{ fontFamily: 'monospace', letterSpacing: '0.05em' }}
+              />
             </div>
 
-            {/* Region & District selector */}
+            {/* Region & District — register only */}
             {!isLogin && (
-              <div className="grid grid-cols-2 gap-2.5">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: '1rem' }}>
                 <div>
-                  <label className="text-gray-300 block mb-1 font-bold">Viloyat:</label>
+                  <label className="form-label">Viloyat</label>
                   <select
-                    value={selectedRegionId}
-                    onChange={(e) => {
-                      setSelectedRegionId(e.target.value);
-                      const sub = allDistricts.find(d => d.region_id === e.target.value);
-                      if (sub) setSelectedDistrictId(sub.id);
+                    value={regionId}
+                    onChange={e => {
+                      setRegionId(e.target.value);
+                      const first = allDistricts.find(d => d.region_id === e.target.value);
+                      if (first) setDistrictId(first.id);
                     }}
-                    className="w-full bg-[#0F172A] border border-white/10 rounded-xl p-2.5 text-white outline-none font-medium"
+                    style={{ width: '100%' }}
                   >
-                    {regions.map((r) => (
-                      <option key={r.id} value={r.id}>{r.name_uz}</option>
-                    ))}
+                    {regions.map(r => <option key={r.id} value={r.id}>{r.name_uz}</option>)}
                   </select>
                 </div>
-
                 <div>
-                  <label className="text-gray-300 block mb-1 font-bold">Tuman:</label>
-                  <select
-                    value={selectedDistrictId}
-                    onChange={(e) => setSelectedDistrictId(e.target.value)}
-                    className="w-full bg-[#0F172A] border border-white/10 rounded-xl p-2.5 text-white outline-none font-medium"
-                  >
-                    {districts.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name_uz}</option>
-                    ))}
+                  <label className="form-label">Tuman</label>
+                  <select value={districtId} onChange={e => setDistrictId(e.target.value)} style={{ width: '100%' }}>
+                    {districts.map(d => <option key={d.id} value={d.id}>{d.name_uz}</option>)}
                   </select>
                 </div>
               </div>
             )}
 
-            {/* Master Category Selector */}
+            {/* Category — master only */}
             {!isLogin && role === 'master' && (
-              <div>
-                <label className="text-gray-300 block mb-1 font-bold">Sohangiz (Kategoriya):</label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-white/10 rounded-xl p-3 text-white outline-none font-medium"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name_uz}</option>
-                  ))}
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Sohangiz</label>
+                <select value={categoryId} onChange={e => setCategoryId(e.target.value)} style={{ width: '100%' }}>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name_uz}</option>)}
                 </select>
               </div>
             )}
 
+            {/* Submit */}
             <button
               type="submit"
-              className="btn-primary w-full justify-center py-3.5 rounded-xl font-extrabold text-sm mt-2"
+              className="btn-primary"
+              disabled={loading}
+              style={{ marginTop: '0.75rem' }}
             >
-              <span>SMS Kod Olish</span>
-              <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <span style={{ opacity: 0.7 }}>Yuborilmoqda…</span>
+              ) : (
+                <>
+                  <span>SMS Kod Olish</span>
+                  <ArrowRight style={{ width: 16, height: 16 }} />
+                </>
+              )}
             </button>
 
-            {/* Guest Browse Option */}
-            <div className="pt-2 text-center">
-              <button
-                type="button"
-                onClick={onBrowseGuest}
-                className="text-gray-400 hover:text-white font-semibold text-xs inline-flex items-center gap-1.5"
-              >
-                <Eye className="w-3.5 h-3.5 text-blue-400" />
-                <span>Ro'yxatdan o'tmasdan katalogga ko'z yugurtirish</span>
+            {/* Guest link */}
+            <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+              <button type="button" className="btn-ghost" onClick={onBrowseGuest}>
+                <Eye style={{ width: 14, height: 14 }} />
+                Ro'yxatdan o'tmasdan ko'rish
               </button>
             </div>
 
           </form>
-        ) : (
-          /* Step 2: SMS Verification OTP */
-          <form onSubmit={handleVerifyOTP} className="space-y-4 text-center text-xs">
-            <div className="bg-blue-500/10 border border-blue-500/20 p-3.5 rounded-xl text-blue-300 font-medium">
-              <strong>{phone}</strong> raqamingizga SMS kod yuborildi. <br />
-              (Simulatsiya kodi: <strong className="text-white text-sm">1234</strong> kiriting).
+        )}
+
+        {/* ── STEP 2: OTP ──────────────────────────── */}
+        {step === 'otp' && (
+          <form onSubmit={handleVerify}>
+
+            {/* OTP hint */}
+            <div style={{
+              background: 'rgba(59,130,246,0.08)',
+              border: '1px solid rgba(59,130,246,0.2)',
+              borderRadius: 14, padding: '1rem',
+              textAlign: 'center', marginBottom: '1.75rem',
+              fontSize: '0.8rem', color: '#93C5FD', fontWeight: 500, lineHeight: 1.6,
+            }}>
+              <strong style={{ display: 'block', color: '#fff', fontSize: '0.9rem', marginBottom: 4 }}>
+                {phone}
+              </strong>
+              raqamiga 4 xonali SMS kod yuborildi.<br />
+              <span style={{ opacity: 0.7 }}>Demo kod: </span>
+              <strong style={{ color: '#fff', fontFamily: 'monospace', fontSize: '1rem', letterSpacing: 4 }}>1234</strong>
             </div>
 
-            <div>
-              <label className="text-gray-300 block mb-2 font-bold">SMS Tasdiqlash Kodini Kiriting:</label>
-              <input
-                type="text"
-                maxLength={4}
-                required
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-                placeholder="1 2 3 4"
-                className="w-40 mx-auto text-center bg-[#0F172A] border-2 border-blue-500 rounded-xl px-4 py-3 text-2xl font-mono text-white tracking-widest outline-none"
-              />
+            {/* 4 OTP boxes */}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: '1.75rem' }}>
+              {otp.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={otpRefs[i]}
+                  className="otp-input"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={e => handleOtpChange(i, e.target.value)}
+                  onKeyDown={e => handleOtpKeyDown(i, e)}
+                />
+              ))}
             </div>
 
-            <button
-              type="submit"
-              className="btn-success w-full justify-center py-3.5 rounded-xl font-extrabold text-sm"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Tasdiqlash va Platformaga Kirish</span>
+            <button type="submit" className="btn-success" disabled={loading}>
+              {loading ? (
+                <span style={{ opacity: 0.7 }}>Tekshirilmoqda…</span>
+              ) : (
+                <>
+                  <CheckCircle2 style={{ width: 16, height: 16 }} />
+                  <span>Tasdiqlash va Kirish</span>
+                </>
+              )}
             </button>
+
+            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => { setStep('form'); setOtp(['','','','']); setError(''); }}
+              >
+                <EyeOff style={{ width: 14, height: 14 }} />
+                Orqaga qaytish
+              </button>
+            </div>
+
           </form>
         )}
 
