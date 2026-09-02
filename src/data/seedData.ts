@@ -1,4 +1,5 @@
 import type { Region, District, Category, Master, Order, Transaction, Review, AuditLog } from '../types';
+import { getAvatarSVG, getPortfolioVectorSVG } from '../utils/avatar';
 
 export const REGIONS: Region[] = [
   { id: 'reg-tashkent-city', name_uz: 'Toshkent shahri' },
@@ -52,8 +53,8 @@ export const DISTRICTS: District[] = [
 
   // Namangan
   { id: 'dist-namangan-sh', region_id: 'reg-namangan', name_uz: 'Namangan shahri' },
-  { id: 'dist-[#chust]', region_id: 'reg-namangan', name_uz: 'Chust tumani' },
-  { id: 'dist-[#kosonsoy]', region_id: 'reg-namangan', name_uz: 'Kosonsoy tumani' },
+  { id: 'dist-chust', region_id: 'reg-namangan', name_uz: 'Chust tumani' },
+  { id: 'dist-kosonsoy', region_id: 'reg-namangan', name_uz: 'Kosonsoy tumani' },
 
   // Buxoro
   { id: 'dist-bukhara-sh', region_id: 'reg-bukhara', name_uz: 'Buxoro shahri' },
@@ -63,7 +64,7 @@ export const DISTRICTS: District[] = [
   // Toshkent viloyati
   { id: 'dist-chirchiq', region_id: 'reg-tashkent-reg', name_uz: 'Chirchiq shahri' },
   { id: 'dist-olmaliq', region_id: 'reg-tashkent-reg', name_uz: 'Olmaliq shahri' },
-  { id: 'dist-yangiyo-l', region_id: 'reg-tashkent-reg', name_uz: 'Yangiyo\'l tumani' },
+  { id: 'dist-yangiyol', region_id: 'reg-tashkent-reg', name_uz: 'Yangiyo\'l tumani' },
 
   // Navoiy
   { id: 'dist-navoiy-sh', region_id: 'reg-navoiy', name_uz: 'Navoiy shahri' },
@@ -81,7 +82,7 @@ export const DISTRICTS: District[] = [
   { id: 'dist-jizzax-sh', region_id: 'reg-jizzax', name_uz: 'Jizzax shahri' },
 
   // Sirdaryo
-  { id: 'dist-[#guliston]', region_id: 'reg-sirdaryo', name_uz: 'Guliston shahri' },
+  { id: 'dist-guliston', region_id: 'reg-sirdaryo', name_uz: 'Guliston shahri' },
 
   // Qoraqalpog'iston
   { id: 'dist-nukus-sh', region_id: 'reg-karakalpakstan', name_uz: 'Nukus shahri' },
@@ -133,7 +134,7 @@ export const SEED_MASTERS: Master[] = [
     user_id: 'usr-m1',
     name: 'Jasurbek Otabayev',
     phone: '+998 90 123 45 67',
-    avatar: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&q=80&w=400',
+    avatar: getAvatarSVG('Jasurbek Otabayev'),
     category_id: 'cat-santexnik',
     category_name: 'Santexnik',
     region_id: 'reg-khorezm',
@@ -147,7 +148,6 @@ export const SEED_MASTERS: Master[] = [
     passport_kyc: {
       status: 'verified',
       passportNumber: 'FA1234567',
-      idPhotoUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=600',
       submittedAt: '2026-08-10',
     },
     price_list: [
@@ -160,13 +160,13 @@ export const SEED_MASTERS: Master[] = [
       {
         id: 'port-1',
         title: 'Yangi xonadonda vannaxona santexnikasi',
-        imageUrl: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=600',
+        imageUrl: getPortfolioVectorSVG('Santexnik'),
         description: 'Barcha quvurlar yashirin montaj qilindi va sinovdan o\'tkazildi.',
       },
       {
         id: 'port-2',
         title: 'Ariston va Boyler tizimi',
-        imageUrl: 'https://images.unsplash.com/photo-1507652313519-d4e9174996dd?auto=format&fit=crop&q=80&w=600',
+        imageUrl: getPortfolioVectorSVG('Santexnik'),
         description: '100L suv isitgich va filtrlash tizimi o\'rnatilishi.',
       },
     ],
@@ -176,7 +176,7 @@ export const SEED_MASTERS: Master[] = [
     user_id: 'usr-m2',
     name: 'Sardorbek Rahimov',
     phone: '+998 94 987 65 43',
-    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=400',
+    avatar: getAvatarSVG('Sardorbek Rahimov'),
     category_id: 'cat-elektrchi',
     category_name: 'Elektrchi',
     region_id: 'reg-khorezm',
@@ -190,7 +190,6 @@ export const SEED_MASTERS: Master[] = [
     passport_kyc: {
       status: 'verified',
       passportNumber: 'FB7654321',
-      idPhotoUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=600',
       submittedAt: '2026-08-15',
     },
     price_list: [
@@ -202,7 +201,7 @@ export const SEED_MASTERS: Master[] = [
       {
         id: 'port-3',
         title: 'Ofis uchun 3 fazali elektr shiti',
-        imageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=600',
+        imageUrl: getPortfolioVectorSVG('Elektrchi'),
         description: 'Avtomatlar va UZO xavfsizlik relesi montaji.',
       },
     ],
@@ -212,7 +211,7 @@ export const SEED_MASTERS: Master[] = [
     user_id: 'usr-m3',
     name: 'Alisher Qodirov',
     phone: '+998 97 333 22 11',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
+    avatar: getAvatarSVG('Alisher Qodirov'),
     category_id: 'cat-quruvchi',
     category_name: 'Quruvchi & Ta\'mirchi',
     region_id: 'reg-tashkent-city',
@@ -226,7 +225,6 @@ export const SEED_MASTERS: Master[] = [
     passport_kyc: {
       status: 'verified',
       passportNumber: 'FC9988776',
-      idPhotoUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=600',
       submittedAt: '2026-07-20',
     },
     price_list: [
@@ -238,7 +236,7 @@ export const SEED_MASTERS: Master[] = [
       {
         id: 'port-4',
         title: 'Luks xonadon tayyor ta\'mirlash',
-        imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=600',
+        imageUrl: getPortfolioVectorSVG('Quruvchi'),
         description: 'Yevro ta\'mir va dekorativ shpatlevka montaji.',
       },
     ],
@@ -248,7 +246,7 @@ export const SEED_MASTERS: Master[] = [
     user_id: 'usr-m4',
     name: 'Bekzod Karimov',
     phone: '+998 91 555 44 33',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
+    avatar: getAvatarSVG('Bekzod Karimov'),
     category_id: 'cat-konditsioner',
     category_name: 'Konditsioner ustasi',
     region_id: 'reg-samarkand',
@@ -260,9 +258,8 @@ export const SEED_MASTERS: Master[] = [
     hourlyRate: 140000,
     completedOrders: 23,
     passport_kyc: {
-      status: 'pending', // Pending KYC for Admin moderation testing!
+      status: 'pending',
       passportNumber: 'FD1122334',
-      idPhotoUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=600',
       submittedAt: '2026-09-01',
     },
     price_list: [

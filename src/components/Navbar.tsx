@@ -1,6 +1,6 @@
 import React from 'react';
 import type { UserRole, Region, District } from '../types';
-import { ShieldCheck, MapPin, User, Wrench, Lock } from 'lucide-react';
+import { MapPin, Wrench, Lock, Menu, LogIn } from 'lucide-react';
 
 interface NavbarProps {
   activeRole: UserRole;
@@ -12,10 +12,12 @@ interface NavbarProps {
   selectedDistrictId: string;
   setSelectedDistrictId: (id: string) => void;
   escrowOrdersCount: number;
+  onToggleSidebar: () => void;
+  currentUser: { name: string; phone: string; role: UserRole } | null;
+  onOpenAuth: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  activeRole,
   setActiveRole,
   regions,
   districts,
@@ -24,47 +26,47 @@ export const Navbar: React.FC<NavbarProps> = ({
   selectedDistrictId,
   setSelectedDistrictId,
   escrowOrdersCount,
+  onToggleSidebar,
+  currentUser,
+  onOpenAuth,
 }) => {
   return (
-    <header className="sticky top-0 z-50 glass-panel border-b border-white/10 px-4 lg:px-8 py-3 transition-all">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 glass-panel border-b border-white/10 px-4 lg:px-6 py-3 transition-all">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         
-        {/* Brand & Tagline */}
-        <div className="flex items-center justify-between w-full md:w-auto">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveRole('client')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-400 p-0.5 shadow-lg shadow-blue-500/30">
+        {/* Left Toggle & Brand */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onToggleSidebar}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
+            title="Menyuni Ochish / Yopish"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveRole('client')}>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-emerald-400 p-0.5 shadow-md shadow-blue-500/20">
               <div className="w-full h-full bg-[#0B0F19] rounded-[10px] flex items-center justify-center">
-                <Wrench className="w-5 h-5 text-blue-400" />
+                <Wrench className="w-4 h-4 text-blue-400" />
               </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-extrabold text-xl tracking-tight text-white">
+            <div className="hidden sm:block">
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-extrabold text-lg tracking-tight text-white">
                   USTA<span className="text-blue-400">MIJOZ</span>
                 </h1>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
                   ESCROW 2%
                 </span>
               </div>
-              <p className="text-xs text-gray-400 font-medium">O'zbekiston bo'ylab ishonchli xizmatlar</p>
             </div>
-          </div>
-
-          {/* Mobile Escrow Badge */}
-          <div className="md:hidden flex items-center gap-2">
-            {escrowOrdersCount > 0 && (
-              <span className="badge-escrow text-xs">
-                <Lock className="w-3 h-3" /> {escrowOrdersCount} Muzlatilgan
-              </span>
-            )}
           </div>
         </div>
 
-        {/* Region & District Geolocation Selector */}
-        <div className="flex items-center gap-2 w-full md:w-auto bg-black/40 p-1.5 rounded-xl border border-white/5">
-          <div className="flex items-center gap-1.5 text-blue-400 pl-2 text-xs font-semibold">
-            <MapPin className="w-4 h-4" />
-            <span className="hidden sm:inline">Hudud:</span>
+        {/* Region & District Selector */}
+        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5">
+          <div className="flex items-center gap-1 text-blue-400 pl-1 text-xs font-semibold">
+            <MapPin className="w-3.5 h-3.5" />
           </div>
 
           <select
@@ -73,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               setSelectedRegionId(e.target.value);
               setSelectedDistrictId('');
             }}
-            className="bg-[#131B2E] text-white text-xs font-medium rounded-lg px-2.5 py-1.5 border border-white/10 outline-none focus:border-blue-500 cursor-pointer"
+            className="bg-[#131B2E] text-white text-xs font-medium rounded-lg px-2 py-1 border border-white/10 outline-none cursor-pointer"
           >
             <option value="">Barcha viloyatlar</option>
             {regions.map((r) => (
@@ -87,7 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <select
               value={selectedDistrictId}
               onChange={(e) => setSelectedDistrictId(e.target.value)}
-              className="bg-[#131B2E] text-white text-xs font-medium rounded-lg px-2.5 py-1.5 border border-white/10 outline-none focus:border-blue-500 cursor-pointer"
+              className="bg-[#131B2E] text-white text-xs font-medium rounded-lg px-2 py-1 border border-white/10 outline-none cursor-pointer hidden md:block"
             >
               <option value="">Barcha tumanlar</option>
               {districts.map((d) => (
@@ -99,58 +101,35 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Role Switcher & User Control */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-          
-          {/* Active Escrow Indicator */}
+        {/* Right User Actions & Auth */}
+        <div className="flex items-center gap-3">
           {escrowOrdersCount > 0 && (
-            <div className="hidden md:flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-xl text-amber-400 text-xs font-semibold">
+            <div className="hidden lg:flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-xl text-amber-400 text-xs font-semibold">
               <Lock className="w-3.5 h-3.5 animate-pulse" />
-              <span>{escrowOrdersCount} ta xavfsiz to'lov muzlatilgan</span>
+              <span>{escrowOrdersCount} Muzlatilgan</span>
             </div>
           )}
 
-          {/* Role Switch Tabs */}
-          <div className="bg-[#131B2E] p-1 rounded-xl border border-white/10 flex items-center gap-1">
+          {currentUser ? (
+            <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 rounded-xl text-xs">
+              <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[10px]">
+                {currentUser.name.substring(0, 1)}
+              </div>
+              <span className="font-bold text-white hidden sm:inline">{currentUser.name}</span>
+            </div>
+          ) : (
             <button
-              onClick={() => setActiveRole('client')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                activeRole === 'client'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'text-gray-400 hover:text-white'
-              }`}
+              onClick={onOpenAuth}
+              className="btn-primary text-xs py-1.5 px-3 rounded-xl flex items-center gap-1.5"
             >
-              <User className="w-3.5 h-3.5" />
-              <span>Mijoz</span>
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Kirish / Registratsiya</span>
             </button>
-
-            <button
-              onClick={() => setActiveRole('master')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                activeRole === 'master'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <Wrench className="w-3.5 h-3.5" />
-              <span>Usta Profili</span>
-            </button>
-
-            <button
-              onClick={() => setActiveRole('admin')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                activeRole === 'admin'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
-              <span>Admin Panel</span>
-            </button>
-          </div>
+          )}
         </div>
 
       </div>
     </header>
   );
 };
+
