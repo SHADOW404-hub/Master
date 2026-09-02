@@ -622,36 +622,46 @@ select option { background: #0D1424; }
 }
 
 /* ============================================================
-   RESPONSIVE UTILITIES
+   RESPONSIVE UTILITIES & TOUCH FIXES
    ============================================================ */
+.scroll-x-touch {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroll-x-touch::-webkit-scrollbar {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .hide-mobile { display: none !important; }
   .page-wrapper { padding: 1rem 0.75rem 3rem; }
+  
+  /* Prevent iOS Safari auto-zoom on input focus */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 @media (max-width: 480px) {
-  .modal-content { padding: 1.25rem 1rem; border-radius: 20px; }
+  .modal-content { 
+    padding: 1.25rem 1rem; 
+    border-radius: 20px; 
+    max-height: 88vh;
+  }
   .auth-box { padding: 1.75rem 1.25rem; border-radius: 20px; }
-  .glass-panel { border-radius: 18px; }
+  .glass-panel { border-radius: 18px; padding: 1.25rem 1rem !important; }
+  .glass-card { border-radius: 16px; padding: 1rem !important; }
 }
 
 @media (min-width: 769px) {
   .hide-desktop { display: none !important; }
-}
-
-/* ============================================================
-   HERO SEARCH SECTION — enhanced
-   ============================================================ */
-.hero-search-wrap {
-  position: relative;
-  padding: 2rem 0 1.5rem;
-}
-
-/* ============================================================
-   MASTER CARD GRID — responsive
-   ============================================================ */
-@media (max-width: 640px) {
-  .glass-card {
-    border-radius: 16px;
-  }
 }
