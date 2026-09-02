@@ -108,7 +108,9 @@ export interface Order {
 export interface Transaction {
   id: string;
   order_id: string;
+  client_id?: string;
   client_name: string;
+  master_id?: string;
   master_name: string;
   amount: number;
   commission_amount: number; // 2%

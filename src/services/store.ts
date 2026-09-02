@@ -138,7 +138,9 @@ export function useAppStore() {
     const newTransaction: Transaction = {
       id: `trx-${Date.now()}`,
       order_id: orderId,
+      client_id: clientId,
       client_name: clientName,
+      master_id: master.id,
       master_name: master.name,
       amount: price,
       commission_amount: commission,
@@ -156,8 +158,11 @@ export function useAppStore() {
   const approveAndReleaseEscrow = (orderId: string) => {
     const now = new Date().toISOString();
 
+    let targetMasterId: string | undefined;
+
     setOrders(prev => prev.map(ord => {
       if (ord.id === orderId) {
+        targetMasterId = ord.master_id;
         return { ...ord, status: 'completed', completed_at: now };
       }
       return ord;
@@ -169,6 +174,16 @@ export function useAppStore() {
       }
       return trx;
     }));
+
+    // Increment master's completed orders count dynamically
+    if (targetMasterId) {
+      setMasters(prev => prev.map(m => {
+        if (m.id === targetMasterId) {
+          return { ...m, completedOrders: m.completedOrders + 1 };
+        }
+        return m;
+      }));
+    }
   };
 
   // 4. Client File Dispute ("E'tiroz bildirish")
@@ -212,15 +227,16 @@ export function useAppStore() {
     // Mark order reviewed
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, reviewed: true } : o));
 
-    // Recalculate master rating
+    // Recalculate master rating safely
     setMasters(prev => prev.map(m => {
       if (m.id === masterId) {
-        const masterReviews = [...reviews.filter(r => r.master_id === masterId), newRev];
-        const avg = masterReviews.reduce((sum, r) => sum + r.rating, 0) / masterReviews.length;
+        const currentReviews = reviews.filter(r => r.master_id === masterId && r.id !== newRev.id);
+        const allMasterReviews = [newRev, ...currentReviews];
+        const avg = allMasterReviews.reduce((sum, r) => sum + r.rating, 0) / allMasterReviews.length;
         return {
           ...m,
           rating: Number(avg.toFixed(1)),
-          reviewsCount: masterReviews.length,
+          reviewsCount: allMasterReviews.length,
         };
       }
       return m;
@@ -309,17 +325,20 @@ export function useAppStore() {
 
   // Withdraw Money from Master Wallet
   const withdrawMasterBalance = (masterId: string, amount: number, cardNumber: string) => {
+    const targetMaster = masters.find(m => m.id === masterId);
+    const masterName = targetMaster?.name || masterId;
     const now = new Date().toISOString();
     const payoutTrx: Transaction = {
       id: `payout-${Date.now()}`,
       order_id: `payout-ref-${Date.now()}`,
       client_name: 'Platforma Yechib Olish',
-      master_name: masterId,
+      master_id: masterId,
+      master_name: masterName,
       amount: amount,
       commission_amount: 0,
       master_payout_amount: amount,
       status: 'released_to_master',
-      payment_system: cardNumber.startsWith('9860') ? 'click' : 'payme',
+      payment_system: cardNumber.replace(/\s/g, '').startsWith('9860') ? 'click' : 'payme',
       created_at: now,
       released_at: now,
     };
@@ -329,12 +348,16 @@ export function useAppStore() {
 
   // 10. Financial Statistics Calculator
   const getFinancialStats = () => {
-    let totalGMV = 0; // Gross Merchandise Volume
+    let totalGMV = 0; // Gross Merchandise Volume (only customer orders)
     let platformProfit = 0; // 2% commission collected
     let frozenEscrow = 0; // Currently in escrow
     let masterPayoutsTotal = 0; // Released to masters
 
     transactions.forEach(t => {
+      // Ignore payout withdrawals for GMV calculation
+      if (t.client_name === 'Platforma Yechib Olish' || t.order_id.startsWith('payout-')) {
+        return;
+      }
       totalGMV += t.amount;
       if (t.status === 'released_to_master') {
         platformProfit += t.commission_amount;
@@ -360,9 +383,13 @@ export function useAppStore() {
     let total_commission_paid = 0;
 
     const masterOrders = orders.filter(o => o.master_id === masterId);
-    const masterTrxs = transactions.filter(t => masterOrders.some(o => o.id === t.order_id));
+    const masterTrxs = transactions.filter(t => 
+      (t.master_id && t.master_id === masterId) || 
+      masterOrders.some(o => o.id === t.order_id)
+    );
 
     masterTrxs.forEach(t => {
+      if (t.client_name === 'Platforma Yechib Olish' || t.order_id.startsWith('payout-')) return;
       if (t.status === 'released_to_master') {
         total_earned += t.master_payout_amount;
         available_balance += t.master_payout_amount;
@@ -374,7 +401,7 @@ export function useAppStore() {
 
     // Subtract manual payouts
     const manualPayouts = transactions
-      .filter(t => t.client_name === 'Platforma Yechib Olish' && t.master_name === masterId)
+      .filter(t => (t.client_name === 'Platforma Yechib Olish' || t.order_id.startsWith('payout-')) && (t.master_id === masterId || t.master_name === masterId))
       .reduce((sum, t) => sum + t.amount, 0);
 
     available_balance = Math.max(0, available_balance - manualPayouts);
