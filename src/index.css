@@ -566,6 +566,16 @@ select option { background: #0D1424; }
 
 .animate-fade-up { animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 8px 28px rgba(59,130,246,0.4); }
+  50%       { box-shadow: 0 8px 40px rgba(59,130,246,0.7), 0 0 60px rgba(16,185,129,0.25); }
+}
+
 /* ============================================================
    RESPONSIVE UTILITIES
    ============================================================ */

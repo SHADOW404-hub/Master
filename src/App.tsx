@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from './services/store';
 import { Navbar } from './components/Navbar';
 import { AuthLanding } from './components/AuthLanding';
@@ -13,18 +13,55 @@ import { ToastContainer } from './components/Toast';
 import type { ToastMessage } from './components/Toast';
 import type { Master, UserRole } from './types';
 import { Shield, Lock, Wrench } from 'lucide-react';
+import { supabase, onAuthStateChange } from './services/supabase';
 
 export function App() {
   const store = useAppStore();
 
   const [currentUser, setCurrentUser] = useState<{
     name: string;
+    email: string;
     phone: string;
     role: UserRole;
   } | null>(() => {
     const saved = localStorage.getItem('usta_mijoz_current_user');
     return saved ? JSON.parse(saved) : null;
   });
+
+  // Supabase auth holati o'zgarganda user yangilanadi
+  useEffect(() => {
+    const { data: { subscription } } = onAuthStateChange(async (authUser) => {
+      if (!authUser) {
+        // Session yo'q — local storage dan o'chiramiz
+        const saved = localStorage.getItem('usta_mijoz_current_user');
+        if (!saved) setCurrentUser(null);
+      } else {
+        // Session bor — profil ma'lumotlarini olamiz
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .single();
+
+        if (profile) {
+          const user = {
+            name: profile.name,
+            email: profile.email,
+            phone: profile.phone || '',
+            role: profile.role as UserRole,
+          };
+          setCurrentUser(user);
+          localStorage.setItem('usta_mijoz_current_user', JSON.stringify(user));
+          store.setActiveRole(profile.role as UserRole);
+          if (profile.region_id) store.setSelectedRegionId(profile.region_id);
+          if (profile.district_id) store.setSelectedDistrictId(profile.district_id);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Active view tab state ('auth' | 'catalog' | 'orders' | 'profile' | 'admin_panel')
   const [activeTab, setActiveTab] = useState<'auth' | 'catalog' | 'orders' | 'profile' | 'admin_panel'>(() => {
@@ -90,12 +127,14 @@ export function App() {
 
   const handleLoginSuccess = (userData: {
     name: string;
+    email: string;
     phone: string;
     role: UserRole;
     region_id: string;
     district_id: string;
+    category_id?: string;
   }) => {
-    const user = { name: userData.name, phone: userData.phone, role: userData.role };
+    const user = { name: userData.name, email: userData.email, phone: userData.phone, role: userData.role };
     setCurrentUser(user);
     localStorage.setItem('usta_mijoz_current_user', JSON.stringify(user));
     store.setActiveRole(userData.role);

@@ -2,19 +2,29 @@
  * Utility functions for security, sanitization, and input formatting
  */
 
-// Format phone number to +998 (XX) XXX-XX-XX
+// Format phone number to +998 XX XXX XX XX
+// Foydalanuvchi yozgan raqamlarni to'g'ri formatlaydi
 export function formatUzbekPhone(value: string): string {
-  const digits = value.replace(/\D/g, '');
-  if (!digits.startsWith('998') && digits.length > 0) {
-    return '+998 ';
+  // Barcha raqam bo'lmagan belgilarni olib tashlaymiz
+  let digits = value.replace(/\D/g, '');
+
+  // Agar 998 bilan boshlanmasa, avvalga qaytaramiz
+  if (digits.length === 0) return '+998 ';
+  if (!digits.startsWith('998')) {
+    digits = '998' + digits.replace(/^998/, '');
   }
-  let formatted = '+';
-  if (digits.length >= 3) formatted += digits.slice(0, 3) + ' ';
-  if (digits.length >= 5) formatted += digits.slice(3, 5) + ' ';
-  if (digits.length >= 8) formatted += digits.slice(5, 8) + ' ';
-  if (digits.length >= 10) formatted += digits.slice(8, 10) + ' ';
-  if (digits.length >= 12) formatted += digits.slice(10, 12);
-  return formatted.trim();
+
+  // Maksimal 12 ta raqam (998 + 9 ta)
+  digits = digits.slice(0, 12);
+
+  // Formatlash: +998 XX XXX XX XX
+  let result = '+' + digits.slice(0, 3); // +998
+  if (digits.length > 3) result += ' ' + digits.slice(3, 5);   // XX
+  if (digits.length > 5) result += ' ' + digits.slice(5, 8);   // XXX
+  if (digits.length > 8) result += ' ' + digits.slice(8, 10);  // XX
+  if (digits.length > 10) result += ' ' + digits.slice(10, 12); // XX
+
+  return result;
 }
 
 // Validate Uzbek phone (+998 90 123 45 67)
