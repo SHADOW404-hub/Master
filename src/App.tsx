@@ -423,7 +423,9 @@ export function App() {
     ? (activePage as 'catalog' | 'jobs' | 'orders' | 'profile' | 'admin_panel')
     : 'catalog';
 
-  const openJobsCount = store.jobRequests.filter(j => j.status === 'open').length;
+  const openJobsCount = currentUser?.role === 'client'
+    ? store.jobRequests.filter(j => (j.client_id === currentUser.id || j.client_id === currentUser.email) && j.status === 'open').length
+    : store.jobRequests.filter(j => j.status === 'open').length;
 
   return (
     <div

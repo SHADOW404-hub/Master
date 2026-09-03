@@ -50,6 +50,13 @@ export const JobBoard: React.FC<JobBoardProps> = ({
 
   // Filter job requests
   const filteredJobs = jobRequests.filter(job => {
+    // Mijoz faqat o'zi e'lon qilgan ishlarni ko'radi!
+    if (currentUser?.role === 'client') {
+      const isMyJob = currentUser.id
+        ? (job.client_id === currentUser.id || job.client_id === currentUser.email)
+        : (job.client_id === currentUser.email);
+      if (!isMyJob) return false;
+    }
     if (filterCategory && job.category_id !== filterCategory) return false;
     if (filterRegion && job.region_id !== filterRegion) return false;
     return true;
@@ -72,21 +79,29 @@ export const JobBoard: React.FC<JobBoardProps> = ({
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
             <Briefcase className="w-4 h-4" />
-            <span>Mijozlar Buyurtmalar Stoli (Client Job Board)</span>
+            <span>
+              {currentUser?.role === 'client'
+                ? "Mening Ish E'lonlarim"
+                : "Mijozlar Buyurtmalar Stoli (Client Job Board)"}
+            </span>
           </div>
-          <h2 className="text-2xl font-extrabold text-white">
+          <h2 className="text-2xl font-extrabold" style={{ color: 'var(--text)' }}>
             {currentUser?.role === 'master'
               ? "Mijozlar Qoldirgan Ishlar va Topshiriqlar"
-              : "Mijozlar E'lon Qilgan Ishlar va Narx Takliflari"}
+              : currentUser?.role === 'client'
+                ? "Mening E'lon Qilgan Ishlarim"
+                : "Mijozlar E'lon Qilgan Ishlar va Narx Takliflari"}
           </h2>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>
             {currentUser?.role === 'master'
               ? "Sizga mos ishni tanlang, borish vaqtingizni belgilang va buyurtmani qabul qiling."
-              : "Ishingiz rasmi va taklif narxingizni joylang — ustalar borish vaqtini belgilab qabul qilishadi."}
+              : currentUser?.role === 'client'
+                ? "Siz joylagan ish e'lonlari. Bu yerda yangi e'lon berishingiz yoki ularni o'chirishingiz mumkin."
+                : "Ishingiz rasmi va taklif narxingizni joylang — ustalar borish vaqtini belgilab qabul qilishadi."}
           </p>
         </div>
 
-        {/* Action Button: Faqat mijozlar uchun (ustalarda bo'lmaydi) */}
+        {/* Action Button: Yagona tugma (faqat mijoz va mehmonlar uchun) */}
         {currentUser?.role !== 'master' && (
           <button
             onClick={() => {
@@ -96,9 +111,10 @@ export const JobBoard: React.FC<JobBoardProps> = ({
               }
               setShowPostModal(true);
             }}
-            className="btn-primary text-xs py-3 px-5 rounded-2xl font-extrabold flex items-center gap-2 shrink-0 shadow-lg shadow-blue-600/30"
+            className="btn-primary text-xs py-2.5 px-4 sm:px-5 rounded-2xl font-extrabold flex items-center justify-center gap-2 shrink-0 shadow-lg shadow-blue-600/30 max-w-full"
+            style={{ width: 'auto' }}
           >
-            <PlusCircle className="w-4.5 h-4.5" />
+            <PlusCircle className="w-4.5 h-4.5 shrink-0" />
             <span>Yangi Ish E'lon Qilish</span>
           </button>
         )}
@@ -139,25 +155,20 @@ export const JobBoard: React.FC<JobBoardProps> = ({
 
       {/* Jobs Grid */}
       {filteredJobs.length === 0 ? (
-        <div className="glass-panel p-12 text-center text-gray-400 max-w-md mx-auto space-y-3 my-8 border border-white/10 rounded-3xl">
+        <div className="glass-panel p-12 text-center max-w-md mx-auto space-y-3 my-8 border border-white/10 rounded-3xl">
           <Briefcase className="w-12 h-12 text-gray-500 mx-auto" />
-          <h3 className="text-lg font-bold" style={{ color: 'var(--text)' }}>Hozircha e'lon qilingan ishlar yo'q</h3>
+          <h3 className="text-lg font-bold" style={{ color: 'var(--text)' }}>
+            {currentUser?.role === 'client'
+              ? "Siz hozircha hech qanday ish e'loni joylamadingiz"
+              : "Hozircha e'lon qilingan ishlar yo'q"}
+          </h3>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>
             {currentUser?.role === 'master'
               ? "Hozircha hech qanday ish e'loni mavjud emas. Biroz kuting!"
-              : "Birinchi bo'lib o'zingiz bajarilishi kerak bo'lgan ishni e'longa joylang!"}
+              : currentUser?.role === 'client'
+                ? "Yuqoridagi 'Yangi Ish E'lon Qilish' tugmasi orqali bajarilishi kerak bo'lgan ishni joylang."
+                : "Birinchi bo'lib o'zingiz bajarilishi kerak bo'lgan ishni e'longa joylang!"}
           </p>
-          {currentUser?.role !== 'master' && (
-            <button
-              onClick={() => {
-                if (!currentUser) { onOpenAuth(); return; }
-                setShowPostModal(true);
-              }}
-              className="btn-primary text-xs py-2.5 px-5 rounded-xl font-bold"
-            >
-              Yangi Ish E'lon Qilish
-            </button>
-          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
