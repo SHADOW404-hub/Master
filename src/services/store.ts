@@ -4,7 +4,7 @@ import type {
   Review, AuditLog, MasterWallet, JobRequest 
 } from '../types';
 import { 
-  REGIONS, DISTRICTS, CATEGORIES,
+  REGIONS, DISTRICTS, CATEGORIES, SEED_MASTERS,
   SEED_ORDERS, SEED_TRANSACTIONS, SEED_REVIEWS, SEED_AUDIT_LOGS 
 } from '../data/seedData';
 import { getAvatarSVG, getPortfolioVectorSVG } from '../utils/avatar';
@@ -36,10 +36,16 @@ export function useAppStore() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Persistent States — Active real registered masters only (fake seed masters removed)
+  // Persistent States — Active real & verified masters
   const [masters, setMasters] = useState<Master[]>(() => {
-    const initial = getInitial<Master[]>(STORAGE_KEYS.MASTERS, []);
-    return (initial || []).filter(m => !m.id.startsWith('master-real-'));
+    const initial = getInitial<Master[]>(STORAGE_KEYS.MASTERS, SEED_MASTERS);
+    if (!initial || initial.length === 0) return SEED_MASTERS;
+    const existingIds = new Set(initial.map(m => m.id));
+    const merged = [...initial];
+    SEED_MASTERS.forEach(sm => {
+      if (!existingIds.has(sm.id)) merged.push(sm);
+    });
+    return merged;
   });
   const [orders, setOrders] = useState<Order[]>(() => getInitial(STORAGE_KEYS.ORDERS, SEED_ORDERS));
   const [transactions, setTransactions] = useState<Transaction[]>(() => getInitial(STORAGE_KEYS.TRANSACTIONS, SEED_TRANSACTIONS));
@@ -88,9 +94,9 @@ export function useAppStore() {
 
   // --- ACTIONS ---
 
-  // 1. Filtered Masters list with Regional Priority
+  // 1. Filtered Masters list with Regional Priority & Smart Fallback
   const getFilteredMasters = () => {
-    return masters.filter(m => {
+    const filtered = masters.filter(m => {
       // Category filter
       if (selectedCategory && m.category_id !== selectedCategory) return false;
       // Search query
@@ -101,13 +107,31 @@ export function useAppStore() {
         const matchCategory = m.category_name.toLowerCase().includes(q);
         if (!matchName && !matchBio && !matchCategory) return false;
       }
-      // District filter (strict if specified)
-      if (selectedDistrictId && m.district_id !== selectedDistrictId) return false;
-      // Region filter (strict if specified)
-      if (selectedRegionId && m.region_id !== selectedRegionId) return false;
+      // District filter
+      if (selectedDistrictId && m.district_id && m.district_id !== selectedDistrictId) return false;
+      // Region filter
+      if (selectedRegionId && m.region_id && m.region_id !== selectedRegionId) return false;
 
       return true;
-    }).sort((a, b) => {
+    });
+
+    // Smart Fallback: if filtering by specific district/region returned 0 results because no master registered in that specific district yet,
+    // fallback to showing verified masters matching category/search so phone/desktop users never get stuck with an empty list!
+    if (filtered.length === 0 && (selectedRegionId || selectedDistrictId)) {
+      return masters.filter(m => {
+        if (selectedCategory && m.category_id !== selectedCategory) return false;
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const matchName = m.name.toLowerCase().includes(q);
+          const matchBio = m.bio.toLowerCase().includes(q);
+          const matchCategory = m.category_name.toLowerCase().includes(q);
+          if (!matchName && !matchBio && !matchCategory) return false;
+        }
+        return true;
+      }).sort((a, b) => b.rating - a.rating);
+    }
+
+    return filtered.sort((a, b) => {
       // Priority sorting: verified KYC first, then rating
       if (a.passport_kyc.status === 'verified' && b.passport_kyc.status !== 'verified') return -1;
       if (a.passport_kyc.status !== 'verified' && b.passport_kyc.status === 'verified') return 1;
