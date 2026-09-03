@@ -17,7 +17,15 @@ import { ToastContainer } from './components/Toast';
 import type { ToastMessage } from './components/Toast';
 import type { Master, UserRole } from './types';
 import { Shield, Lock, Wrench } from 'lucide-react';
-import { supabase, onAuthStateChange, authSignOut } from './services/supabase';
+import {
+  authSignIn,
+  authSignUp,
+  authSignOut,
+  getUserProfile,
+  onAuthStateChange,
+  supabase,
+  fetchAllMastersFromSupabase,
+} from './services/supabase';
 
 // ─── Theme helpers (run immediately so no flash on load) ─────────────────────
 const THEME_KEY = 'usta_mijoz_theme';
@@ -187,15 +195,9 @@ export function App() {
 
       // 2. Fetch all registered masters from Supabase profiles table
       try {
-        const { data: dbMasters, error } = await supabase
-          .from('profiles')
-          .select('*');
+        const masterProfiles = await fetchAllMastersFromSupabase();
 
-        if (dbMasters && !error && dbMasters.length > 0) {
-          const masterProfiles = dbMasters.filter(
-            (m) => (m.role && m.role.toLowerCase() === 'master') || m.category_id
-          );
-
+        if (masterProfiles && masterProfiles.length > 0) {
           masterProfiles.forEach((m) => {
             store.registerMasterInStore({
               id: m.id,

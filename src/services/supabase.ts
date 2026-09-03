@@ -136,6 +136,31 @@ export async function updateUserProfile(
 }
 
 /**
+ * Supabase `profiles` jadvalidan barcha tasdiqlangan va ro'yxatdan o'tgan ustalarni olish
+ */
+export async function fetchAllMastersFromSupabase(): Promise<UserProfile[]> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*');
+
+    if (error) {
+      console.warn('Supabase profiles fetch warning:', error.message);
+      return [];
+    }
+
+    if (!data || data.length === 0) return [];
+
+    return data.filter(
+      (p) => (p.role && p.role.toLowerCase() === 'master') || p.category_id
+    ) as UserProfile[];
+  } catch (err) {
+    console.warn('fetchAllMastersFromSupabase catch:', err);
+    return [];
+  }
+}
+
+/**
  * Auth holat o'zgarishini kuzatish
  */
 export function onAuthStateChange(
