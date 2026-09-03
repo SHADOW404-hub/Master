@@ -19,6 +19,29 @@ import type { Master, UserRole } from './types';
 import { Shield, Lock, Wrench } from 'lucide-react';
 import { supabase, onAuthStateChange, authSignOut } from './services/supabase';
 
+// ─── Theme helpers (run immediately so no flash on load) ─────────────────────
+const THEME_KEY = 'usta_mijoz_theme';
+
+function getInitialTheme(): 'dark' | 'light' {
+  try {
+    const saved = localStorage.getItem(THEME_KEY) as 'dark' | 'light' | null;
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch { /* ignore */ }
+  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+// Apply theme to <html> before first render
+(function applyThemeEarly() {
+  const t = (() => {
+    try {
+      const s = localStorage.getItem(THEME_KEY) as 'dark' | 'light' | null;
+      if (s === 'dark' || s === 'light') return s;
+    } catch { /* ignore */ }
+    return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  })();
+  document.documentElement.setAttribute('data-theme', t);
+})();
+
 // ─── Page View types ────────────────────────────────────────────────────────
 type PageView =
   | 'landing'
@@ -66,6 +89,23 @@ function clearUser() {
 
 export function App() {
   const store = useAppStore();
+
+  // ── Theme State ─────────────────────────────────────────────────────
+  const [theme, setTheme] = useState<'dark' | 'light'>(getInitialTheme);
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem(THEME_KEY, next); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  // Sync data-theme attribute on mount (in case React hydration differs)
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // ── Auth State ──────────────────────────────────────────────────────
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(getSavedUser);
@@ -386,7 +426,10 @@ export function App() {
   const openJobsCount = store.jobRequests.filter(j => j.status === 'open').length;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#070A12] text-gray-100 font-sans selection:bg-blue-600 selection:text-white">
+    <div
+      className="min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white"
+      style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}
+    >
       <ToastContainer toasts={toasts} onDismiss={removeToast} />
 
       {/* Navbar */}
@@ -406,6 +449,8 @@ export function App() {
         currentUser={currentUser}
         onOpenAuth={() => setActivePage('login')}
         onLogout={handleLogout}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Main content */}
@@ -430,22 +475,10 @@ export function App() {
                   `Mijozga xabar berildi va borish vaqti (${arrivalTime}) saqlandi. To'lov platformada muzlatildi.`
                 );
               }}
-              onCreateJob={(jobData) => {
-                if (currentUser) {
-                  store.createJobRequest({
-                    ...jobData,
-                    clientUser: currentUser,
-                  });
-                  addToast(
-                    'success',
-                    'Ish E\'lon Qilindi!',
-                    'Ishingiz muvaffaqiyatli e\'longa joylandi. Ustalar borish vaqtini belgilab qabul qilishadi.'
-                  );
-                }
-              }}
+              onCreateJob={() => { /* usta ish e'lon qila olmaydi */ }}
               onCancelJob={(jobId) => {
                 store.cancelJobRequest(jobId);
-                addToast('info', 'E\'lon O\'chirildi', 'Ish e\'loningiz muvaffaqiyatli o\'chirildi.');
+                addToast('info', "E'lon O'chirildi", "Ish e'loningiz muvaffaqiyatli o'chirildi.");
               }}
               onOpenAuth={() => setActivePage('login')}
             />
@@ -692,26 +725,29 @@ export function App() {
       )}
 
       {/* FOOTER */}
-      <footer className="glass-panel border-t border-white/10 py-6 px-4 sm:px-6 text-xs text-gray-400 mt-auto">
+      <footer
+        className="glass-panel border-t py-6 px-4 sm:px-6 text-xs mt-auto"
+        style={{ borderTopColor: 'var(--border)', color: 'var(--muted)' }}
+      >
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 font-extrabold text-white text-sm">
+            <div className="flex items-center gap-2 font-extrabold text-sm" style={{ color: 'var(--text)' }}>
               <Wrench className="w-4 h-4 text-blue-400" />
               <span>USTAMIJOZ.UZ</span>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-mono">
                 2% ESCROW PROTOCOL
               </span>
             </div>
-            <p className="text-gray-500 mt-1 text-[11px]">
+            <p className="mt-1 text-[11px]" style={{ color: 'var(--muted)' }}>
               O'zbekistonning barcha 14 hududi bo'yicha ishonchli ustalar va mijozlar platformasi.
             </p>
           </div>
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-1.5 text-gray-400 font-semibold">
+            <div className="flex items-center gap-1.5 font-semibold" style={{ color: 'var(--muted)' }}>
               <Shield className="w-4 h-4 text-emerald-400" />
               <span>Pasport KYC Moderatsiyasi</span>
             </div>
-            <div className="flex items-center gap-1.5 text-gray-400 font-semibold">
+            <div className="flex items-center gap-1.5 font-semibold" style={{ color: 'var(--muted)' }}>
               <Lock className="w-4 h-4 text-amber-400" />
               <span>Payme / Click Escrow</span>
             </div>

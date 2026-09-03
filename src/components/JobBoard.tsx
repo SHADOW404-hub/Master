@@ -111,7 +111,7 @@ export const JobBoard: React.FC<JobBoardProps> = ({
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="bg-[#0F172A] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500 font-semibold"
+            className="select-custom rounded-xl px-3 py-2 text-xs outline-none font-semibold"
           >
             <option value="">Barcha Kategoriyalar</option>
             {categories.map(c => (
@@ -123,7 +123,7 @@ export const JobBoard: React.FC<JobBoardProps> = ({
           <select
             value={filterRegion}
             onChange={(e) => setFilterRegion(e.target.value)}
-            className="bg-[#0F172A] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500 font-semibold"
+            className="select-custom rounded-xl px-3 py-2 text-xs outline-none font-semibold"
           >
             <option value="">Barcha Viloyatlar</option>
             {regions.map(r => (
@@ -132,8 +132,8 @@ export const JobBoard: React.FC<JobBoardProps> = ({
           </select>
         </div>
 
-        <div className="text-xs text-gray-400 font-semibold">
-          Topildi: <strong className="text-white">{filteredJobs.length} ta</strong> e'lon
+        <div className="text-xs font-semibold" style={{ color: 'var(--muted)' }}>
+          Topildi: <strong style={{ color: 'var(--text)' }}>{filteredJobs.length} ta</strong> e'lon
         </div>
       </div>
 
@@ -141,19 +141,23 @@ export const JobBoard: React.FC<JobBoardProps> = ({
       {filteredJobs.length === 0 ? (
         <div className="glass-panel p-12 text-center text-gray-400 max-w-md mx-auto space-y-3 my-8 border border-white/10 rounded-3xl">
           <Briefcase className="w-12 h-12 text-gray-500 mx-auto" />
-          <h3 className="text-lg font-bold text-white">Hozircha e'lon qilingan ishlar yo'q</h3>
-          <p className="text-xs text-gray-400">
-            Birinchi bo'lib o'zingiz bajarilishi kerak bo'lgan ishni e'longa joylang!
+          <h3 className="text-lg font-bold" style={{ color: 'var(--text)' }}>Hozircha e'lon qilingan ishlar yo'q</h3>
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>
+            {currentUser?.role === 'master'
+              ? "Hozircha hech qanday ish e'loni mavjud emas. Biroz kuting!"
+              : "Birinchi bo'lib o'zingiz bajarilishi kerak bo'lgan ishni e'longa joylang!"}
           </p>
-          <button
-            onClick={() => {
-              if (!currentUser) { onOpenAuth(); return; }
-              setShowPostModal(true);
-            }}
-            className="btn-primary text-xs py-2.5 px-5 rounded-xl font-bold"
-          >
-            Yangi Ish E'lon Qilish
-          </button>
+          {currentUser?.role !== 'master' && (
+            <button
+              onClick={() => {
+                if (!currentUser) { onOpenAuth(); return; }
+                setShowPostModal(true);
+              }}
+              className="btn-primary text-xs py-2.5 px-5 rounded-xl font-bold"
+            >
+              Yangi Ish E'lon Qilish
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -273,7 +277,6 @@ export const JobBoard: React.FC<JobBoardProps> = ({
       {/* Post Modal */}
       {showPostModal && (
         <PostJobModal
-          categories={categories}
           regions={regions}
           allDistricts={allDistricts}
           defaultRegionId={selectedRegionId}

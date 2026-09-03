@@ -33,7 +33,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onSubmitKYC,
   onWithdrawMoney,
   onOpenAuth,
-  onLogout,
+  onLogout: _onLogout,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'info' | 'wallet' | 'kyc' | 'edit'>('info');
 
@@ -168,29 +168,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           </div>
         </div>
 
-        {/* Master Status Switcher / Logout */}
-        <div className="flex items-center gap-3">
-          {currentUser.role === 'master' && master && (
-            <button
-              onClick={() => onToggleStatus(master.id)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                master.status === 'available'
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
-                  : 'bg-red-600 text-white shadow-lg shadow-red-600/30'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              <span>{master.status === 'available' ? 'Hozir Bo\'shman' : 'Bandman'}</span>
-            </button>
-          )}
-
+        {/* Master Status Switcher only */}
+        {currentUser.role === 'master' && master && (
           <button
-            onClick={onLogout}
-            className="btn-secondary text-xs py-2.5 px-4 rounded-xl text-red-400 hover:border-red-500/40 font-bold"
+            onClick={() => onToggleStatus(master.id)}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              master.status === 'available'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                : 'bg-red-600/80 text-white shadow-lg shadow-red-600/20'
+            }`}
           >
-            Chiqish
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            <span>{master.status === 'available' ? "Hozir Bo'shman" : 'Bandman'}</span>
           </button>
-        </div>
+        )}
 
       </div>
 
@@ -300,26 +291,26 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
           <form onSubmit={handleProfileSave} className="space-y-4 text-xs max-w-xl">
             <div>
-              <label className="text-gray-400 block mb-1 font-semibold">Xizmat va O'zingiz haqizda ma'lumot (Bio):</label>
+              <label className="form-label">Xizmat va O'zingiz haqizda ma'lumot (Bio):</label>
               <textarea
                 rows={4}
                 required
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="Tajribangiz, kafolatingiz va bajaradigan ishlaringiz haqida qisqacha..."
-                className="w-full bg-[#0F172A] border border-white/10 rounded-xl p-3 text-white outline-none focus:border-indigo-500 font-medium"
+                className="textarea-custom focus:border-indigo-500"
               />
             </div>
 
             <div>
-              <label className="text-gray-400 block mb-1 font-semibold">Soatlik Xizmat Narxi (so'm):</label>
+              <label className="form-label">Soatlik Xizmat Narxi (so'm):</label>
               <input
                 type="number"
                 required
                 step={5000}
                 value={hourlyRate}
                 onChange={(e) => setHourlyRate(Number(e.target.value))}
-                className="w-full bg-[#0F172A] border border-white/10 rounded-xl p-3 text-white font-bold font-mono outline-none focus:border-indigo-500"
+                className="auth-input font-bold font-mono focus:border-indigo-500"
               />
             </div>
 
@@ -392,26 +383,26 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
             <form onSubmit={handleWithdraw} className="space-y-3 text-xs max-w-md">
               <div>
-                <label className="text-gray-400 block mb-1 font-semibold">Karta Raqami (8600 Uzcard / 9860 Humo):</label>
+                <label className="form-label">Karta Raqami (8600 Uzcard / 9860 Humo):</label>
                 <input
                   type="text"
                   required
                   value={withdrawCard}
                   onChange={(e) => setWithdrawCard(formatCardNumber(e.target.value))}
                   placeholder="8600 0000 0000 0000"
-                  className="w-full bg-[#0F172A] border border-white/10 rounded-xl p-3 text-white font-mono outline-none focus:border-emerald-500 font-bold"
+                  className="auth-input font-mono font-bold focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="text-gray-400 block mb-1 font-semibold">Yechiladigan Summa (so'm):</label>
+                <label className="form-label">Yechiladigan Summa (so'm):</label>
                 <input
                   type="number"
                   required
                   max={wallet.available_balance}
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(Number(e.target.value))}
-                  className="w-full bg-[#0F172A] border border-white/10 rounded-xl p-3 text-white font-bold outline-none focus:border-emerald-500 font-mono"
+                  className="auth-input font-bold font-mono focus:border-emerald-500"
                 />
               </div>
 
@@ -451,14 +442,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
           <form onSubmit={handleKYCSubmit} className="space-y-3 text-xs max-w-md">
             <div>
-              <label className="text-gray-400 block mb-1 font-semibold">Pasport / ID karta seriyasi (FA1234567):</label>
+              <label className="form-label">Pasport / ID karta seriyasi (FA1234567):</label>
               <input
                 type="text"
                 required
                 value={passportNum}
                 onChange={(e) => setPassportNum(e.target.value)}
                 placeholder="FA1234567"
-                className="w-full bg-[#0F172A] border border-white/10 rounded-xl p-3 text-white font-mono uppercase outline-none focus:border-blue-500 font-bold"
+                className="auth-input font-mono uppercase font-bold focus:border-blue-500"
               />
             </div>
 
