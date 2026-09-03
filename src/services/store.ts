@@ -91,14 +91,14 @@ export function useAppStore() {
   // 1. Filtered Masters list with Regional Priority & Fallback for real registered users
   const getFilteredMasters = () => {
     const filtered = masters.filter(m => {
-      // Category filter
-      if (selectedCategory && m.category_id !== selectedCategory) return false;
+      // Category filter (only filter out if master has category_id specified and it differs)
+      if (selectedCategory && m.category_id && m.category_id !== selectedCategory) return false;
       // Search query
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        const matchName = m.name.toLowerCase().includes(q);
-        const matchBio = m.bio.toLowerCase().includes(q);
-        const matchCategory = m.category_name.toLowerCase().includes(q);
+        const matchName = m.name ? m.name.toLowerCase().includes(q) : false;
+        const matchBio = m.bio ? m.bio.toLowerCase().includes(q) : false;
+        const matchCategory = m.category_name ? m.category_name.toLowerCase().includes(q) : false;
         if (!matchName && !matchBio && !matchCategory) return false;
       }
       // District filter
@@ -109,7 +109,7 @@ export function useAppStore() {
       return true;
     });
 
-    // Fallback: If filter returned 0 results but we have registered masters, return all masters so real users are ALWAYS visible
+    // Fallback: If filter returned 0 results but we have registered masters in store, return all masters so real users are ALWAYS visible!
     if (filtered.length === 0 && masters.length > 0) {
       return [...masters].sort((a, b) => b.rating - a.rating);
     }

@@ -142,28 +142,47 @@ export function App() {
   // Restore and sync saved master profile + fetch all registered masters from Supabase on mount
   useEffect(() => {
     const fetchMastersFromDatabase = async () => {
-      // 1. Sync local saved user if master
-      const saved = getSavedUser();
-      if (saved && saved.role === 'master') {
-        store.registerMasterInStore(saved);
-        // Ensure saved master is upserted to Supabase profiles so phone gets it
-        if (saved.id) {
-          try {
-            await supabase.from('profiles').upsert({
-              id: saved.id,
-              name: saved.name,
-              email: saved.email,
-              phone: saved.phone || null,
-              role: 'master',
-              region_id: saved.region_id || null,
-              district_id: saved.district_id || null,
-              category_id: saved.category_id || null,
-              created_at: new Date().toISOString(),
-            });
-          } catch (e) {
-            console.warn('Upsert saved master to profiles error:', e);
+      // 1. Sync all local saved masters from localStorage to store & Supabase
+      try {
+        const savedMastersRaw = localStorage.getItem('usta_mijoz_masters');
+        if (savedMastersRaw) {
+          const savedMasters = JSON.parse(savedMastersRaw);
+          if (Array.isArray(savedMasters) && savedMasters.length > 0) {
+            for (const m of savedMasters) {
+              if (m && m.name && !m.id?.startsWith('master-real-')) {
+                const masterUser = {
+                  id: m.user_id || m.id,
+                  name: m.name,
+                  email: m.email || '',
+                  phone: m.phone || '',
+                  role: 'master' as const,
+                  region_id: m.region_id || '',
+                  district_id: m.district_id || '',
+                  category_id: m.category_id || undefined,
+                };
+                store.registerMasterInStore(masterUser);
+                // Ensure uploaded to Supabase profiles table
+                try {
+                  await supabase.from('profiles').upsert({
+                    id: masterUser.id,
+                    name: masterUser.name,
+                    email: masterUser.email,
+                    phone: masterUser.phone || null,
+                    role: 'master',
+                    region_id: masterUser.region_id || null,
+                    district_id: masterUser.district_id || null,
+                    category_id: masterUser.category_id || null,
+                    created_at: new Date().toISOString(),
+                  });
+                } catch (e) {
+                  console.warn('Upsert local master to profiles error:', e);
+                }
+              }
+            }
           }
         }
+      } catch (e) {
+        console.warn('Read local masters error:', e);
       }
 
       // 2. Fetch all registered masters from Supabase profiles table
@@ -174,14 +193,14 @@ export function App() {
 
         if (dbMasters && !error && dbMasters.length > 0) {
           const masterProfiles = dbMasters.filter(
-            (m) => m.role && m.role.toLowerCase() === 'master'
+            (m) => (m.role && m.role.toLowerCase() === 'master') || m.category_id
           );
 
           masterProfiles.forEach((m) => {
             store.registerMasterInStore({
               id: m.id,
-              name: m.name,
-              email: m.email,
+              name: m.name || m.email?.split('@')[0] || 'Usta',
+              email: m.email || '',
               phone: m.phone || '',
               role: 'master',
               region_id: m.region_id || '',
