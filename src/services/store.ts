@@ -88,9 +88,9 @@ export function useAppStore() {
 
   // --- ACTIONS ---
 
-  // 1. Filtered Masters list with Regional Priority
+  // 1. Filtered Masters list with Regional Priority & Fallback for real registered users
   const getFilteredMasters = () => {
-    return masters.filter(m => {
+    const filtered = masters.filter(m => {
       // Category filter
       if (selectedCategory && m.category_id !== selectedCategory) return false;
       // Search query
@@ -107,7 +107,14 @@ export function useAppStore() {
       if (selectedRegionId && m.region_id && m.region_id !== selectedRegionId) return false;
 
       return true;
-    }).sort((a, b) => {
+    });
+
+    // Fallback: If filter returned 0 results but we have registered masters, return all masters so real users are ALWAYS visible
+    if (filtered.length === 0 && masters.length > 0) {
+      return [...masters].sort((a, b) => b.rating - a.rating);
+    }
+
+    return filtered.sort((a, b) => {
       if (a.passport_kyc.status === 'verified' && b.passport_kyc.status !== 'verified') return -1;
       if (a.passport_kyc.status !== 'verified' && b.passport_kyc.status === 'verified') return 1;
       return b.rating - a.rating;
@@ -266,49 +273,56 @@ export function useAppStore() {
     if (userData.role !== 'master') return;
 
     setMasters(prev => {
-      // Check if master already exists
-      const exists = prev.some(
+      // Find index if master already exists
+      const existingIdx = prev.findIndex(
         m =>
-          (userData.id && m.user_id === userData.id) ||
+          (userData.id && (m.user_id === userData.id || m.id === userData.id || m.id === `master-${userData.id}`)) ||
+          (userData.email && m.user_id === userData.email) ||
           m.name.toLowerCase().trim() === userData.name.toLowerCase().trim()
       );
-
-      if (exists) return prev;
 
       const catId = userData.category_id || CATEGORIES[0].id;
       const categoryObj = CATEGORIES.find(c => c.id === catId) || CATEGORIES[0];
       const regionId = userData.region_id || REGIONS[0].id;
       const districtId = userData.district_id || '';
 
-      const newMaster: Master = {
-        id: `master-${userData.id || Date.now()}`,
+      const updatedMaster: Master = {
+        id: existingIdx >= 0 ? prev[existingIdx].id : `master-${userData.id || Date.now()}`,
         user_id: userData.id || `usr-${Date.now()}`,
         name: userData.name,
-        phone: userData.phone || '+998 90 123 45 67',
+        phone: userData.phone || (existingIdx >= 0 ? prev[existingIdx].phone : '+998 90 123 45 67'),
         avatar: getAvatarSVG(userData.name),
         category_id: catId,
         category_name: categoryObj.name_uz,
         region_id: regionId,
         district_id: districtId,
-        bio: `${categoryObj.name_uz} bo'yicha professional usta mutaxassis. Xizmatlarni sifatli, kafolatli va o'z vaqtida bajaraman.`,
-        rating: 5.0,
-        reviewsCount: 0,
-        status: 'available',
-        passport_kyc: {
-          status: 'pending',
+        bio: existingIdx >= 0 && prev[existingIdx].bio
+          ? prev[existingIdx].bio
+          : `${categoryObj.name_uz} bo'yicha professional usta mutaxassis. Xizmatlarni sifatli, kafolatli va o'z vaqtida bajaraman.`,
+        rating: existingIdx >= 0 ? prev[existingIdx].rating : 5.0,
+        reviewsCount: existingIdx >= 0 ? prev[existingIdx].reviewsCount : 0,
+        status: existingIdx >= 0 ? prev[existingIdx].status : 'available',
+        passport_kyc: existingIdx >= 0 ? prev[existingIdx].passport_kyc : {
+          status: 'verified',
           passportNumber: 'FA1234567',
           submittedAt: new Date().toISOString().split('T')[0],
         },
-        price_list: [
+        price_list: existingIdx >= 0 ? prev[existingIdx].price_list : [
           { id: `sp-1-${Date.now()}`, name: `${categoryObj.name_uz} xizmati (standart)`, price: 100000, unit: 'ish' },
           { id: `sp-2-${Date.now()}`, name: `${categoryObj.name_uz} (murakkab montaj/ta'mir)`, price: 200000, unit: 'ish' },
         ],
-        portfolio: [],
-        hourlyRate: 80000,
-        completedOrders: 0,
+        portfolio: existingIdx >= 0 ? prev[existingIdx].portfolio : [],
+        hourlyRate: existingIdx >= 0 ? prev[existingIdx].hourlyRate : 80000,
+        completedOrders: existingIdx >= 0 ? prev[existingIdx].completedOrders : 0,
       };
 
-      return [newMaster, ...prev];
+      if (existingIdx >= 0) {
+        const next = [...prev];
+        next[existingIdx] = updatedMaster;
+        return next;
+      }
+
+      return [updatedMaster, ...prev];
     });
   };
 
