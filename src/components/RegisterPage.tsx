@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import type { UserRole, Region, District, Category } from '../types';
 import { formatUzbekPhone } from '../utils/validation';
-import { authSignUp } from '../services/supabase';
+import { authSignUp, supabase } from '../services/supabase';
 
 interface RegisterPageProps {
   regions: Region[];
@@ -142,8 +142,27 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
         phone: phone.replace(/\D/g, '').length >= 12 ? phone : undefined,
       });
 
+      const userId = signUpRes?.user?.id || `usr-${Date.now()}`;
+
+      // ── Supabase profiles jadvaliga saqlash (barcha qurilmalar va telefonlarda ko'rinishi uchun) ──
+      try {
+        await supabase.from('profiles').upsert({
+          id: userId,
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.replace(/\D/g, '').length >= 12 ? phone : null,
+          role,
+          region_id: regionId,
+          district_id: districtId,
+          category_id: role === 'master' ? categoryId : null,
+          created_at: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.warn('Profiles table upsert warning:', e);
+      }
+
       const registeredUser = {
-        id: signUpRes?.user?.id || `usr-${Date.now()}`,
+        id: userId,
         name: name.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.replace(/\D/g, '').length >= 12 ? phone : '',

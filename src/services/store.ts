@@ -4,7 +4,7 @@ import type {
   Review, AuditLog, MasterWallet, JobRequest 
 } from '../types';
 import { 
-  REGIONS, DISTRICTS, CATEGORIES, SEED_MASTERS,
+  REGIONS, DISTRICTS, CATEGORIES,
   SEED_ORDERS, SEED_TRANSACTIONS, SEED_REVIEWS, SEED_AUDIT_LOGS 
 } from '../data/seedData';
 import { getAvatarSVG, getPortfolioVectorSVG } from '../utils/avatar';
@@ -36,10 +36,10 @@ export function useAppStore() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Persistent States — Active real & verified masters
+  // Persistent States — Active real registered masters only (fake seed masters removed)
   const [masters, setMasters] = useState<Master[]>(() => {
-    const initial = getInitial<Master[]>(STORAGE_KEYS.MASTERS, SEED_MASTERS);
-    return initial && initial.length > 0 ? initial : SEED_MASTERS;
+    const initial = getInitial<Master[]>(STORAGE_KEYS.MASTERS, []);
+    return (initial || []).filter(m => !m.id.startsWith('master-real-'));
   });
   const [orders, setOrders] = useState<Order[]>(() => getInitial(STORAGE_KEYS.ORDERS, SEED_ORDERS));
   const [transactions, setTransactions] = useState<Transaction[]>(() => getInitial(STORAGE_KEYS.TRANSACTIONS, SEED_TRANSACTIONS));
