@@ -63,6 +63,7 @@ export interface CurrentUser {
   role: UserRole;
   region_id?: string;
   district_id?: string;
+  category_id?: string;
 }
 
 const STORAGE_KEY = 'usta_mijoz_current_user';
@@ -141,21 +142,42 @@ export function App() {
   // Restore and sync saved master profile + fetch all registered masters from Supabase on mount
   useEffect(() => {
     const fetchMastersFromDatabase = async () => {
-      // 1. Sync local saved master if present
+      // 1. Sync local saved user if master
       const saved = getSavedUser();
       if (saved && saved.role === 'master') {
         store.registerMasterInStore(saved);
+        // Ensure saved master is upserted to Supabase profiles so phone gets it
+        if (saved.id) {
+          try {
+            await supabase.from('profiles').upsert({
+              id: saved.id,
+              name: saved.name,
+              email: saved.email,
+              phone: saved.phone || null,
+              role: 'master',
+              region_id: saved.region_id || null,
+              district_id: saved.district_id || null,
+              category_id: saved.category_id || null,
+              created_at: new Date().toISOString(),
+            });
+          } catch (e) {
+            console.warn('Upsert saved master to profiles error:', e);
+          }
+        }
       }
 
       // 2. Fetch all registered masters from Supabase profiles table
       try {
         const { data: dbMasters, error } = await supabase
           .from('profiles')
-          .select('*')
-          .eq('role', 'master');
+          .select('*');
 
         if (dbMasters && !error && dbMasters.length > 0) {
-          dbMasters.forEach((m) => {
+          const masterProfiles = dbMasters.filter(
+            (m) => m.role && m.role.toLowerCase() === 'master'
+          );
+
+          masterProfiles.forEach((m) => {
             store.registerMasterInStore({
               id: m.id,
               name: m.name,

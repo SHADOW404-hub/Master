@@ -1,5 +1,4 @@
 import type { Region, District, Category, Master, Order, Transaction, Review, AuditLog } from '../types';
-import { getAvatarSVG, getPortfolioVectorSVG } from '../utils/avatar';
 
 export const REGIONS: Region[] = [
   { id: 'reg-tashkent-city', name_uz: 'Toshkent shahri' },
@@ -128,121 +127,7 @@ export const CATEGORIES: Category[] = [
   },
 ];
 
-export const SEED_MASTERS: Master[] = [
-  {
-    id: 'master-real-1',
-    user_id: 'usr-m1',
-    name: 'Jasurbek Otabayev',
-    phone: '+998 90 123 45 67',
-    avatar: getAvatarSVG('Jasurbek Otabayev'),
-    category_id: 'cat-santexnik',
-    category_name: 'Santexnik',
-    region_id: 'reg-tashkent-city',
-    district_id: 'dist-yunusobod',
-    bio: '10 yillik tajribaga ega professional santexnik. Barcha turdagi quvur, kran va sanitariya ishlarini sifatli bajaraman. Kafolat beriladi.',
-    rating: 4.9,
-    reviewsCount: 38,
-    status: 'available',
-    hourlyRate: 120000,
-    completedOrders: 42,
-    passport_kyc: {
-      status: 'verified',
-      passportNumber: 'FA1234567',
-      submittedAt: '2026-08-10',
-    },
-    price_list: [
-      { id: 'p1', name: 'Kran almashtirish', price: 80000, unit: 'dona' },
-      { id: 'p2', name: 'Boyler o\'rnatish', price: 250000, unit: 'komplekt' },
-    ],
-    portfolio: [
-      {
-        id: 'port-1',
-        title: 'Yangi xonadonda vannaxona santexnikasi',
-        imageUrl: getPortfolioVectorSVG('Santexnik'),
-        description: 'Barcha quvurlar yashirin montaj qilindi va sinovdan o\'tkazildi.',
-      },
-    ],
-  },
-  {
-    id: 'master-real-2',
-    user_id: 'usr-m2',
-    name: 'Sardorbek Rahimov',
-    phone: '+998 94 987 65 43',
-    avatar: getAvatarSVG('Sardorbek Rahimov'),
-    category_id: 'cat-elektrchi',
-    category_name: 'Elektrchi',
-    region_id: 'reg-tashkent-city',
-    district_id: 'dist-chilonzor',
-    bio: 'Oliy ma\'lumotli muhandis-elektrchi. Uylar, ofislar va do\'konlarda elektr simlarini sifatli montaj qilish va shit yig\'ish.',
-    rating: 4.8,
-    reviewsCount: 29,
-    status: 'available',
-    hourlyRate: 150000,
-    completedOrders: 31,
-    passport_kyc: {
-      status: 'verified',
-      passportNumber: 'FB7654321',
-      submittedAt: '2026-08-15',
-    },
-    price_list: [
-      { id: 'pe1', name: 'Elektr shiti yig\'ish', price: 350000, unit: 'dona' },
-      { id: 'pe2', name: 'Rozetka / Avtomat o\'rnatish', price: 25000, unit: 'dona' },
-    ],
-    portfolio: [],
-  },
-  {
-    id: 'master-real-3',
-    user_id: 'usr-m3',
-    name: 'Anvarjon Karimov',
-    phone: '+998 93 456 78 90',
-    avatar: getAvatarSVG('Anvarjon Karimov'),
-    category_id: 'cat-quruvchi',
-    category_name: 'Quruvchi & Ta\'mirchi',
-    region_id: 'reg-samarkand',
-    district_id: 'dist-samarkand-sh',
-    bio: 'Xonadonlarni kaliti bilan ta\'mirlash, kafel va gipsokarton montaji. 8 yillik tajriba.',
-    rating: 5.0,
-    reviewsCount: 45,
-    status: 'available',
-    hourlyRate: 130000,
-    completedOrders: 50,
-    passport_kyc: {
-      status: 'verified',
-      passportNumber: 'FC9876543',
-      submittedAt: '2026-08-18',
-    },
-    price_list: [
-      { id: 'pq1', name: 'Kafel terish', price: 90000, unit: 'kv.m' },
-    ],
-    portfolio: [],
-  },
-  {
-    id: 'master-real-4',
-    user_id: 'usr-m4',
-    name: 'Dilshodbek Tursunov',
-    phone: '+998 91 345 67 89',
-    avatar: getAvatarSVG('Dilshodbek Tursunov'),
-    category_id: 'cat-konditsioner',
-    category_name: 'Konditsioner ustasi',
-    region_id: 'reg-fergana',
-    district_id: 'dist-fergana-sh',
-    bio: 'Konditsionerlar montaji, profilaktik tozalash va freon quyish. Sifatli va tezkor xizmat.',
-    rating: 4.9,
-    reviewsCount: 22,
-    status: 'available',
-    hourlyRate: 110000,
-    completedOrders: 28,
-    passport_kyc: {
-      status: 'verified',
-      passportNumber: 'FD5432167',
-      submittedAt: '2026-08-20',
-    },
-    price_list: [
-      { id: 'pk1', name: 'Konditsioner o\'rnatish', price: 300000, unit: 'komplekt' },
-    ],
-    portfolio: [],
-  },
-];
+export const SEED_MASTERS: Master[] = [];
 
 export const SEED_ORDERS: Order[] = [];
 
